@@ -57,7 +57,6 @@ function M.check()
       "Install with: curl -fsSL https://cli.coderabbit.ai/install.sh | sh",
     })
   end
-
 end
 
 return M
