@@ -22,7 +22,7 @@ function M.apply(bufnr, lnum, end_lnum, suggestion, message)
   local remaining = {}
   local removed = false
   for _, d in ipairs(existing) do
-    if not removed and d.lnum == lnum and d.message == message then
+    if not removed and d.lnum == lnum and d.end_lnum == (end_lnum or lnum) and d.message == message then
       removed = true
     else
       table.insert(remaining, d)
@@ -102,10 +102,12 @@ function M.attach(bufnr)
             callback(nil, result)
           elseif method == "workspace/executeCommand" then
             if params.command == "coderabbit.apply" then
-              local arg = params.arguments[1]
-              vim.schedule(function()
-                M.apply(arg.bufnr, arg.lnum, arg.end_lnum, arg.suggestion, arg.message)
-              end)
+              local args = type(params.arguments) == "table" and params.arguments[1]
+              if type(args) == "table" and args.bufnr and args.lnum and args.suggestion and args.message then
+                vim.schedule(function()
+                  M.apply(args.bufnr, args.lnum, args.end_lnum, args.suggestion, args.message)
+                end)
+              end
             end
             callback(nil, nil)
           else
