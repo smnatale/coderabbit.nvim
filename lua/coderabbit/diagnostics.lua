@@ -27,7 +27,6 @@ function M.set(filepath, diagnostics)
   local existing = vim.diagnostic.get(bufnr, { namespace = M.ns })
   local merged = vim.list_extend(existing, diagnostics)
   vim.diagnostic.set(M.ns, bufnr, merged)
-  -- Attach code action client so suggestions appear in vim.lsp.buf.code_action()
   require("coderabbit.actions").attach(bufnr)
 end
 

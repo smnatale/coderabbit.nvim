@@ -1,6 +1,6 @@
 local M = {}
 
-local ns = vim.api.nvim_create_namespace("coderabbit")
+local ns = require("coderabbit.diagnostics").ns
 
 --- Apply a suggestion to a buffer and remove the corresponding diagnostic.
 --- @param bufnr number Buffer number
