@@ -14,31 +14,13 @@ body:
       placeholder: |
         1. Open a file with diagnostics
         2. ...
-    validations:
-      required: true
   - type: textarea
     attributes:
       label: "Expected behavior"
   - type: textarea
     attributes:
-      label: "Actual behavior"
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: "Neovim version"
-      description: "Output of `nvim --version`"
+      label: "Checkhealth output"
+      description: "Output of `:checkhealth coderabbit`"
       render: markdown
     validations:
       required: true
-  - type: input
-    attributes:
-      label: "Operating system"
-      placeholder: "macOS 15.0 / Ubuntu 24.04 / etc."
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: "Plugin configuration"
-      description: "Your coderabbit.nvim setup (the relevant parts of your config)."
-      render: lua
