@@ -123,6 +123,12 @@ function M.run(opts)
       elseif event.type == "error" then
         got_error = true
         local msg = event.message or "Unknown error"
+        if event.errorType then
+          msg = "[" .. event.errorType .. "] " .. msg
+        end
+        if event.details and type(event.details) == "table" and next(event.details) then
+          msg = msg .. "\n" .. vim.inspect(event.details)
+        end
         if msg:match("[Aa]uth") then
           msg = msg .. "\nRun: cr auth login"
         end
