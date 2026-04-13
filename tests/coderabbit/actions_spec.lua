@@ -139,6 +139,40 @@ test("apply: preserves other diagnostics", function()
   eq(remaining[1].message, "second issue")
 end)
 
+test("apply: shifts later diagnostics when suggestion changes line count", function()
+  reset()
+  local bufnr = make_buf({ "line0", "line1", "line2", "line3", "line4" })
+
+  vim.diagnostic.set(diagnostics.ns, bufnr, {
+    {
+      lnum = 1,
+      col = 0,
+      severity = vim.diagnostic.severity.WARN,
+      message = "replace this",
+      source = "coderabbit",
+      user_data = { suggestions = { "new1\nnew2\nnew3" } },
+    },
+    {
+      lnum = 3,
+      end_lnum = 4,
+      col = 0,
+      severity = vim.diagnostic.severity.INFO,
+      message = "later issue",
+      source = "coderabbit",
+      user_data = { suggestions = { "fix_later" } },
+    },
+  })
+
+  -- Replace 1 line with 3 lines (delta = +2)
+  actions.apply(bufnr, 1, nil, "new1\nnew2\nnew3", "replace this")
+
+  local remaining = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns })
+  eq(#remaining, 1)
+  eq(remaining[1].message, "later issue")
+  eq(remaining[1].lnum, 5)      -- was 3, shifted by +2
+  eq(remaining[1].end_lnum, 6)  -- was 4, shifted by +2
+end)
+
 -- ──────────────────────────────────────────────────────────
 -- Tests: get_actions
 -- ──────────────────────────────────────────────────────────
