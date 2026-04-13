@@ -96,7 +96,8 @@ end)
 test("set: diagnostics appear in global vim.diagnostic.get()", function()
   reset()
   local _, filepath = make_temp_buf("src/global.ts")
-  local diag = { lnum = 0, col = 0, severity = vim.diagnostic.severity.INFO, message = "Global check", source = "coderabbit" }
+  local diag =
+    { lnum = 0, col = 0, severity = vim.diagnostic.severity.INFO, message = "Global check", source = "coderabbit" }
   diagnostics.set(filepath, { diag })
 
   -- This is what Telescope calls: vim.diagnostic.get() with no buffer filter
@@ -219,7 +220,13 @@ test("set: diagnostics for unopened file are still retrievable", function()
   vim.fn.writefile({ "// not open" }, filepath)
 
   diagnostics.set(filepath, {
-    { lnum = 5, col = 0, severity = vim.diagnostic.severity.WARN, message = "Unopened file finding", source = "coderabbit" },
+    {
+      lnum = 5,
+      col = 0,
+      severity = vim.diagnostic.severity.WARN,
+      message = "Unopened file finding",
+      source = "coderabbit",
+    },
   })
 
   -- This is the key test: can vim.diagnostic.get() find it?
