@@ -14,6 +14,7 @@ local state = {
   cwd = nil,
   start_time = nil,
   fidget_handle = nil,
+  last_notify_time = nil,
 }
 
 local function spinner()
@@ -101,7 +102,15 @@ function M.run(opts)
 
       if event.type == "status" then
         local msg = event.status or event.phase or "working..."
-        fidget_update(msg)
+        if state.fidget_handle then
+          fidget_update(msg)
+        else
+          local now = os.time()
+          if not state.last_notify_time or (now - state.last_notify_time) >= 20 then
+            state.last_notify_time = now
+            vim.notify("CodeRabbit: " .. msg, vim.log.levels.INFO)
+          end
+        end
       elseif event.type == "finding" then
         finding_count = finding_count + 1
         local diag, filepath = parser.finding_to_diagnostic(event, state.cwd, cfg.diagnostics.severity_map)
@@ -123,6 +132,8 @@ function M.run(opts)
 
     on_exit = function(code, stderr)
       state.job_id = nil
+      state.start_time = nil
+      state.last_notify_time = nil
 
       if code == -1 then
         fidget_finish("timed out")
@@ -144,7 +155,7 @@ function M.run(opts)
       if not got_error then
         local summary =
           string.format("CodeRabbit: Review complete. %d finding%s.", finding_count, finding_count == 1 and "" or "s")
-        fidget_finish(summary)
+        fidget_finish(string.format("done — %d finding%s", finding_count, finding_count == 1 and "" or "s"))
         vim.notify(summary, vim.log.levels.INFO)
       else
         fidget_finish("done (with errors)")
