@@ -10,8 +10,19 @@ function M.check()
     vim.health.error("Neovim >= 0.10 required")
   end
 
-  -- CLI binary
+  -- Configuration
   local config = require("coderabbit.config")
+  local configured = config._current ~= nil
+
+  if configured then
+    vim.health.ok("Plugin configured")
+  else
+    vim.health.warn("setup() has not been called yet", {
+      'Add require("coderabbit").setup({}) to your config',
+    })
+  end
+
+  -- CLI binary
   local cfg = config.get()
   local binary = cfg.cli.binary
 
@@ -36,10 +47,10 @@ function M.check()
         local org = auth.currentOrg and auth.currentOrg.name or "none"
         vim.health.ok("Authenticated as " .. user .. " (org: " .. org .. ")")
       else
-        vim.health.warn("Not authenticated", { "Run: cr auth login" })
+        vim.health.warn("Not authenticated", { "Run: " .. binary .. " auth login" })
       end
     else
-      vim.health.warn("Could not check auth status", { "Run: cr auth login" })
+      vim.health.warn("Could not check auth status", { "Run: " .. binary .. " auth login" })
     end
   else
     vim.health.error("CLI not found: " .. binary, {
@@ -47,14 +58,6 @@ function M.check()
     })
   end
 
-  -- Configuration
-  if config._current then
-    vim.health.ok("Plugin configured")
-  else
-    vim.health.warn("setup() has not been called yet", {
-      'Add require("coderabbit").setup({}) to your config',
-    })
-  end
 end
 
 return M
