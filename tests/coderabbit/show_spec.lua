@@ -45,8 +45,12 @@ local function f(path, lnum, sev, msg, suggestions, end_lnum)
   return {
     filepath = path,
     diagnostic = {
-      lnum = lnum, end_lnum = end_lnum, col = 0, severity = sev,
-      message = msg, source = "coderabbit",
+      lnum = lnum,
+      end_lnum = end_lnum,
+      col = 0,
+      severity = sev,
+      message = msg,
+      source = "coderabbit",
       user_data = { suggestions = suggestions or {}, severity_raw = "minor" },
     },
   }
@@ -61,37 +65,66 @@ end
 -- ──────────────────────────────────────────────────────────
 
 local render_cases = {
-  { "empty findings shows no-findings message",
-    {}, nil, nil, { "No findings" } },
-  { "header is present",
-    {}, nil, nil, { "# CodeRabbit Review" } },
-  { "single finding renders file, severity, line, message",
-    { f(CWD .. "/src/foo.ts", 41, E, "null check needed") }, nil, nil,
-    { "## src/foo.ts", "[ERROR]", "Line 42", "null check needed" } },
-  { "line range renders Lines N-M",
-    { f(CWD .. "/a.ts", 98, W, "fix this", {}, 102) }, nil, nil,
-    { "Lines 99-103" } },
-  { "suggestions rendered as code blocks",
-    { f(CWD .. "/app.ts", 5, W, "fix it", { "const x = 1" }) }, nil, nil,
-    { "```ts", "const x = 1", "Suggested fix" } },
-  { "no suggestions omits code block",
-    { f(CWD .. "/app.ts", 5, W, "just a note", {}) }, nil, nil,
-    { "just a note" }, { "```", "Suggested fix" } },
-  { "context metadata appears in header",
-    {}, { review_type = "committed", current_branch = "feat/x", base_branch = "main", base_commit = "abc1234" }, nil,
-    { "**Type:** committed", "**Branch:** feat/x", "**Base:** main", "**Commit:** abc1234", "**Findings:** 0" } },
-  { "nil context omits metadata",
-    {}, nil, nil,
-    { "# CodeRabbit Review" }, { "**Type:**" } },
-  { "relative paths when cwd provided",
-    { f("/home/user/project/src/index.ts", 0, I, "note") }, nil, "/home/user/project",
-    { "## src/index.ts" } },
-  { "absolute paths kept when cwd does not match",
-    { f("/other/path/foo.ts", 0, I, "note") }, nil, "/home/user/project",
-    { "## /other/path/foo.ts" } },
-  { "multi-line suggestion preserves newlines",
-    { f(CWD .. "/a.ts", 5, W, "fix", { "line1\nline2\nline3" }) }, nil, nil,
-    { "line1", "line2", "line3" } },
+  { "empty findings shows no-findings message", {}, nil, nil, { "No findings" } },
+  { "header is present", {}, nil, nil, { "# CodeRabbit Review" } },
+  {
+    "single finding renders file, severity, line, message",
+    { f(CWD .. "/src/foo.ts", 41, E, "null check needed") },
+    nil,
+    nil,
+    { "## src/foo.ts", "[ERROR]", "Line 42", "null check needed" },
+  },
+  {
+    "line range renders Lines N-M",
+    { f(CWD .. "/a.ts", 98, W, "fix this", {}, 102) },
+    nil,
+    nil,
+    { "Lines 99-103" },
+  },
+  {
+    "suggestions rendered as code blocks",
+    { f(CWD .. "/app.ts", 5, W, "fix it", { "const x = 1" }) },
+    nil,
+    nil,
+    { "```ts", "const x = 1", "Suggested fix" },
+  },
+  {
+    "no suggestions omits code block",
+    { f(CWD .. "/app.ts", 5, W, "just a note", {}) },
+    nil,
+    nil,
+    { "just a note" },
+    { "```", "Suggested fix" },
+  },
+  {
+    "context metadata appears in header",
+    {},
+    { review_type = "committed", current_branch = "feat/x", base_branch = "main", base_commit = "abc1234" },
+    nil,
+    { "**Type:** committed", "**Branch:** feat/x", "**Base:** main", "**Commit:** abc1234", "**Findings:** 0" },
+  },
+  { "nil context omits metadata", {}, nil, nil, { "# CodeRabbit Review" }, { "**Type:**" } },
+  {
+    "relative paths when cwd provided",
+    { f("/home/user/project/src/index.ts", 0, I, "note") },
+    nil,
+    "/home/user/project",
+    { "## src/index.ts" },
+  },
+  {
+    "absolute paths kept when cwd does not match",
+    { f("/other/path/foo.ts", 0, I, "note") },
+    nil,
+    "/home/user/project",
+    { "## /other/path/foo.ts" },
+  },
+  {
+    "multi-line suggestion preserves newlines",
+    { f(CWD .. "/a.ts", 5, W, "fix", { "line1\nline2\nline3" }) },
+    nil,
+    nil,
+    { "line1", "line2", "line3" },
+  },
 }
 
 for _, case in ipairs(render_cases) do
@@ -144,8 +177,12 @@ end)
 
 test("render: file extension to language mapping", function()
   local cases = {
-    { ".py", "```py" }, { ".js", "```js" }, { ".go", "```go" },
-    { ".lua", "```lua" }, { ".rs", "```rs" }, { ".xyz", "```xyz" },
+    { ".py", "```py" },
+    { ".js", "```js" },
+    { ".go", "```go" },
+    { ".lua", "```lua" },
+    { ".rs", "```rs" },
+    { ".xyz", "```xyz" },
   }
   for _, c in ipairs(cases) do
     local lines = render({ f("/tmp/r/a" .. c[1], 0, I, "x", { "code" }) }, nil, "/tmp/r")
@@ -165,14 +202,22 @@ local function with_review(findings, ctx, running, fn)
   if not _originals.get_results then
     _originals = { get_results = review.get_results, get_context = review.get_context, is_running = review.is_running }
   end
-  review.get_results = function() return findings or {} end
-  review.get_context = function() return ctx end
-  review.is_running = function() return running or false end
-  local ok, err = true, nil
-  ok, err = pcall(fn)
-  review.get_results, review.get_context, review.is_running = _originals.get_results, _originals.get_context, _originals.is_running
+  review.get_results = function()
+    return findings or {}
+  end
+  review.get_context = function()
+    return ctx
+  end
+  review.is_running = function()
+    return running or false
+  end
+  local ok, err = pcall(fn)
+  review.get_results, review.get_context, review.is_running =
+    _originals.get_results, _originals.get_context, _originals.is_running
   show._reset()
-  if not ok then error(err, 2) end
+  if not ok then
+    error(err, 2)
+  end
 end
 
 local one_finding = { f(CWD .. "/a.ts", 5, W, "test finding") }
@@ -202,7 +247,11 @@ test("open: no review shows notification (no buffer created)", function()
   with_review({}, nil, false, function()
     local notified = false
     local orig = vim.notify
-    vim.notify = function(msg) if msg:find("No review results") then notified = true end end
+    vim.notify = function(msg)
+      if msg:find("No review results") then
+        notified = true
+      end
+    end
     show.open()
     vim.notify = orig
     assert(notified, "expected notification")
@@ -225,7 +274,11 @@ test("open: q keymap is set", function()
     show.open()
     local keymaps = vim.api.nvim_buf_get_keymap(show._get_buf_id(), "n")
     local found = false
-    for _, km in ipairs(keymaps) do if km.lhs == "q" then found = true end end
+    for _, km in ipairs(keymaps) do
+      if km.lhs == "q" then
+        found = true
+      end
+    end
     assert(found, "expected q keymap")
   end)
 end)

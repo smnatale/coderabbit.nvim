@@ -169,8 +169,8 @@ test("apply: shifts later diagnostics when suggestion changes line count", funct
   local remaining = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns })
   eq(#remaining, 1)
   eq(remaining[1].message, "later issue")
-  eq(remaining[1].lnum, 5)      -- was 3, shifted by +2
-  eq(remaining[1].end_lnum, 6)  -- was 4, shifted by +2
+  eq(remaining[1].lnum, 5) -- was 3, shifted by +2
+  eq(remaining[1].end_lnum, 6) -- was 4, shifted by +2
 end)
 
 -- ──────────────────────────────────────────────────────────
