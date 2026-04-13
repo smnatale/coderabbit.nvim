@@ -1,0 +1,6 @@
+.claude/
+*.swp
+*.swo
+*~
+tags
+.luarc.json

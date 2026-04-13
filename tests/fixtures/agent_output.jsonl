@@ -1,0 +1,9 @@
+{"type":"review_context","reviewType":"committed","currentBranch":"main","baseBranch":"main","baseCommit":"HEAD~1","workingDirectory":"/tmp/test-repo"}
+{"type":"status","phase":"connecting","status":"connecting_to_review_service"}
+{"type":"status","phase":"setup","status":"setting_up"}
+{"type":"status","phase":"analyzing","status":"summarizing"}
+{"type":"status","phase":"analyzing","status":"reviewing"}
+{"type":"finding","severity":"critical","fileName":"apps/server/src/controllers/stripeController.ts","codegenInstructions":"Verify each finding against the current code and only fix it if needed.\n\nIn @apps/server/src/controllers/stripeController.ts around lines 99 - 103, EventBooking.findOneAndUpdate may return null; add a null check after the call.","suggestions":["  const event = await EventBooking.findOneAndUpdate(\n    { _id: bookingId },\n    { paid: true },\n    { new: true }\n  )\n  if (!event) {\n    console.error('EventBooking not found:', bookingId)\n    return\n  }"]}
+{"type":"finding","severity":"major","fileName":"apps/server/src/controllers/classController.ts","codegenInstructions":"Verify each finding against the current code and only fix it if needed.\n\nIn @apps/server/src/controllers/classController.ts at line 104, The code uses bookingObj.uid.startsWith('guest_') which will throw if uid is null/undefined.","suggestions":["              if (bookingObj.uid?.startsWith('guest_')) {"]}
+{"type":"finding","severity":"minor","fileName":"apps/server/src/controllers/stripeController.ts","codegenInstructions":"Verify each finding against the current code and only fix it if needed.\n\nIn @apps/server/src/controllers/stripeController.ts at line 122, Booking.findOneAndUpdate may return null if no booking matches bookingId; add a null check.","suggestions":[]}
+{"type":"complete","status":"review_completed","findings":3}
