@@ -15,6 +15,10 @@ local state = {
   start_time = nil,
   fidget_handle = nil,
   last_notify_time = nil,
+  review_type = nil,
+  current_branch = nil,
+  base_branch = nil,
+  base_commit = nil,
 }
 
 local function spinner()
@@ -54,6 +58,20 @@ end
 
 function M.get_results()
   return state.findings
+end
+
+function M.get_context()
+  if not state.cwd and not state.review_type then
+    return nil
+  end
+  return {
+    cwd = state.cwd,
+    review_type = state.review_type,
+    current_branch = state.current_branch,
+    base_branch = state.base_branch,
+    base_commit = state.base_commit,
+    start_time = state.start_time,
+  }
 end
 
 --- Return a short status string for statusline integration.
@@ -104,6 +122,10 @@ function M.run(opts)
         if event.workingDirectory then
           state.cwd = event.workingDirectory
         end
+        state.review_type = event.reviewType
+        state.current_branch = event.currentBranch
+        state.base_branch = event.baseBranch
+        state.base_commit = event.baseCommit
       elseif event.type == "status" then
         local msg = event.status or event.phase or "working..."
         if state.fidget_handle then
@@ -166,8 +188,11 @@ function M.run(opts)
       end
 
       if not got_error then
-        local summary =
-          string.format("CodeRabbit: Review complete. %d finding%s.", finding_count, finding_count == 1 and "" or "s")
+        local summary = string.format(
+          "CodeRabbit: Review complete. %d finding%s. Run :CodeRabbitShow to view.",
+          finding_count,
+          finding_count == 1 and "" or "s"
+        )
         fidget_finish(string.format("done — %d finding%s", finding_count, finding_count == 1 and "" or "s"))
         vim.notify(summary, vim.log.levels.INFO)
       else
@@ -195,6 +220,12 @@ end
 function M.clear()
   diagnostics.clear()
   state.findings = {}
+  state.cwd = nil
+  state.start_time = nil
+  state.review_type = nil
+  state.current_branch = nil
+  state.base_branch = nil
+  state.base_commit = nil
   vim.notify("CodeRabbit: Cleared", vim.log.levels.INFO)
 end
 

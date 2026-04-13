@@ -3,11 +3,14 @@ if vim.g.loaded_coderabbit then
 end
 vim.g.loaded_coderabbit = true
 
-vim.api.nvim_create_user_command("CodeRabbitReview", function(args)
-  -- Lazy setup if not called yet
+local function ensure_setup()
   if not require("coderabbit.config")._current then
     require("coderabbit").setup({})
   end
+end
+
+vim.api.nvim_create_user_command("CodeRabbitReview", function(args)
+  ensure_setup()
   local opts = {}
   if args.fargs[1] then
     opts.type = args.fargs[1]
@@ -31,4 +34,11 @@ vim.api.nvim_create_user_command("CodeRabbitClear", function()
   require("coderabbit").clear()
 end, {
   desc = "Clear CodeRabbit diagnostics",
+})
+
+vim.api.nvim_create_user_command("CodeRabbitShow", function()
+  ensure_setup()
+  require("coderabbit").show()
+end, {
+  desc = "Show CodeRabbit review results in a buffer",
 })

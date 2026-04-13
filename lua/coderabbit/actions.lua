@@ -17,6 +17,9 @@ function M.apply(bufnr, lnum, end_lnum, suggestion, message)
   local new_lines = vim.split(suggestion, "\n", { plain = true })
   vim.api.nvim_buf_set_lines(bufnr, lnum, end_line, false, new_lines)
 
+  local old_count = end_line - lnum
+  local delta = #new_lines - old_count
+
   -- Remove the applied diagnostic (first match only)
   local existing = vim.diagnostic.get(bufnr, { namespace = ns })
   local remaining = {}
@@ -25,6 +28,12 @@ function M.apply(bufnr, lnum, end_lnum, suggestion, message)
     if not removed and d.lnum == lnum and d.end_lnum == (end_lnum or lnum) and d.message == message then
       removed = true
     else
+      if d.lnum >= end_line then
+        d.lnum = d.lnum + delta
+        if d.end_lnum then
+          d.end_lnum = d.end_lnum + delta
+        end
+      end
       table.insert(remaining, d)
     end
   end
