@@ -27,6 +27,7 @@ function M.set(filepath, diagnostics)
   local existing = vim.diagnostic.get(bufnr, { namespace = M.ns })
   local merged = vim.list_extend(existing, diagnostics)
   vim.diagnostic.set(M.ns, bufnr, merged)
+  require("coderabbit.actions").attach(bufnr)
 end
 
 function M.clear()

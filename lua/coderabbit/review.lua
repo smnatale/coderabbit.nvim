@@ -100,7 +100,11 @@ function M.run(opts)
         return
       end
 
-      if event.type == "status" then
+      if event.type == "review_context" then
+        if event.workingDirectory then
+          state.cwd = event.workingDirectory
+        end
+      elseif event.type == "status" then
         local msg = event.status or event.phase or "working..."
         if state.fidget_handle then
           fidget_update(msg)
@@ -125,6 +129,9 @@ function M.run(opts)
         local msg = event.message or "Unknown error"
         if event.errorType then
           msg = "[" .. event.errorType .. "] " .. msg
+        end
+        if event.metadata and event.metadata.waitTime then
+          msg = msg .. " (retry in " .. event.metadata.waitTime .. ")"
         end
         if event.details and type(event.details) == "table" and next(event.details) then
           msg = msg .. "\n" .. vim.inspect(event.details)
