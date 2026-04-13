@@ -1,7 +1,3 @@
-## Description
-
-Summary of the change and which issue it addresses.
-
 Fixes # (issue)
 
 ## Type of change
@@ -9,6 +5,14 @@ Fixes # (issue)
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
+
+## Description
+
+Summary of the change and which issue it addresses.
+
+## Screenshots/Images
+
+Images pasted here.
 
 ## How has this been tested?
 
