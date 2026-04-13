@@ -39,4 +39,8 @@ jobs:
           neovim: true
           version: stable
       - name: Run tests
-        run: nvim --headless -u tests/minimal_init.lua -c "luafile tests/coderabbit/parser_spec.lua" -c "qa!"
+        run: |
+          for spec in tests/coderabbit/*_spec.lua; do
+            echo "=== $spec ==="
+            nvim --headless -u tests/minimal_init.lua -c "luafile $spec" -c "qa!"
+          done
