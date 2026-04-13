@@ -20,4 +20,8 @@ function M.clear()
   require("coderabbit.review").clear()
 end
 
+function M.status()
+  return require("coderabbit.review").status()
+end
+
 return M

@@ -3,7 +3,7 @@ local M = {}
 M.defaults = {
   cli = {
     binary = "cr",
-    timeout = 120000,
+    timeout = 0,
     extra_args = {},
   },
   review = {

@@ -5,11 +5,47 @@ local cli = require("coderabbit.cli")
 local parser = require("coderabbit.parser")
 local diagnostics = require("coderabbit.diagnostics")
 
+local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
+local FRAME_MS = 80
+
 local state = {
   job_id = nil,
   findings = {},
   cwd = nil,
+  start_time = nil,
+  fidget_handle = nil,
 }
+
+local function spinner()
+  local idx = math.floor(vim.uv.hrtime() / (1e6 * FRAME_MS)) % #spinner_frames + 1
+  return spinner_frames[idx]
+end
+
+local function fidget_start()
+  local ok, progress = pcall(require, "fidget.progress")
+  if not ok then
+    return nil
+  end
+  return progress.handle.create({
+    title = "Reviewing",
+    message = "analyzing...",
+    lsp_client = { name = "coderabbit" },
+  })
+end
+
+local function fidget_update(msg)
+  if state.fidget_handle then
+    state.fidget_handle.message = msg
+  end
+end
+
+local function fidget_finish(msg)
+  if state.fidget_handle then
+    state.fidget_handle.message = msg
+    state.fidget_handle:finish()
+    state.fidget_handle = nil
+  end
+end
 
 function M.is_running()
   return state.job_id ~= nil
@@ -17,6 +53,16 @@ end
 
 function M.get_results()
   return state.findings
+end
+
+--- Return a short status string for statusline integration.
+--- Returns nil when no review is running.
+function M.status()
+  if not state.job_id then
+    return nil
+  end
+  local elapsed = os.time() - state.start_time
+  return string.format("%s CodeRabbit (%ds)", spinner(), elapsed)
 end
 
 function M.run(opts)
@@ -43,6 +89,9 @@ function M.run(opts)
 
   vim.notify("CodeRabbit: Reviewing...")
 
+  state.start_time = os.time()
+  state.fidget_handle = fidget_start()
+
   state.job_id = cli.review(opts, {
     on_line = function(line)
       local event = parser.parse_line(line)
@@ -51,7 +100,8 @@ function M.run(opts)
       end
 
       if event.type == "status" then
-        vim.notify("CodeRabbit: " .. (event.status or event.phase or "working..."), vim.log.levels.INFO)
+        local msg = event.status or event.phase or "working..."
+        fidget_update(msg)
       elseif event.type == "finding" then
         finding_count = finding_count + 1
         local diag, filepath = parser.finding_to_diagnostic(event, state.cwd, cfg.diagnostics.severity_map)
@@ -75,6 +125,7 @@ function M.run(opts)
       state.job_id = nil
 
       if code == -1 then
+        fidget_finish("timed out")
         vim.notify("CodeRabbit: Review timed out", vim.log.levels.ERROR)
         return
       end
@@ -85,6 +136,7 @@ function M.run(opts)
         if msg:match("[Aa]uth") then
           msg = msg .. "\nRun: cr auth login"
         end
+        fidget_finish("failed")
         vim.notify("CodeRabbit: " .. msg, vim.log.levels.ERROR)
         return
       end
@@ -92,7 +144,10 @@ function M.run(opts)
       if not got_error then
         local summary =
           string.format("CodeRabbit: Review complete. %d finding%s.", finding_count, finding_count == 1 and "" or "s")
+        fidget_finish(summary)
         vim.notify(summary, vim.log.levels.INFO)
+      else
+        fidget_finish("done (with errors)")
       end
 
       if cfg.on_review_complete then
@@ -104,6 +159,7 @@ end
 
 function M.stop()
   if state.job_id then
+    fidget_finish("cancelled")
     cli.cancel(state.job_id)
     state.job_id = nil
     vim.notify("CodeRabbit: Review cancelled", vim.log.levels.INFO)
