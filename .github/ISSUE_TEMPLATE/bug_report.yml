@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a problem with coderabbit.nvim
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: "Description"
+      description: "A short description of the problem."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Steps to reproduce"
+      placeholder: |
+        1. Open a file with diagnostics
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Expected behavior"
+  - type: textarea
+    attributes:
+      label: "Actual behavior"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Neovim version"
+      description: "Output of `nvim --version`"
+      render: markdown
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: "Operating system"
+      placeholder: "macOS 15.0 / Ubuntu 24.04 / etc."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Plugin configuration"
+      description: "Your coderabbit.nvim setup (the relevant parts of your config)."
+      render: lua
