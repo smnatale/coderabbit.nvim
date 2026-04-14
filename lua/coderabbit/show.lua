@@ -32,6 +32,45 @@ local function line_label(diag)
   return nil
 end
 
+local function set_win_opts(winid)
+  vim.api.nvim_set_option_value("number", false, { win = winid })
+  vim.api.nvim_set_option_value("relativenumber", false, { win = winid })
+  vim.api.nvim_set_option_value("signcolumn", "no", { win = winid })
+  vim.api.nvim_set_option_value("wrap", true, { win = winid })
+  vim.api.nvim_set_option_value("linebreak", true, { win = winid })
+  vim.api.nvim_set_option_value("spell", false, { win = winid })
+  vim.api.nvim_set_option_value("conceallevel", 2, { win = winid })
+end
+
+local function open_float(buf, float_cfg)
+  local width = math.floor(vim.o.columns * float_cfg.width)
+  local height = math.floor(vim.o.lines * float_cfg.height)
+  local row = math.floor((vim.o.lines - height) / 2)
+  local col = math.floor((vim.o.columns - width) / 2)
+  vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = "minimal",
+    border = float_cfg.border,
+    title = " CodeRabbit Review ",
+    title_pos = "center",
+  })
+end
+
+local function open_window(buf)
+  local cfg = require("coderabbit.config").get().show
+  local layout = cfg.layout
+
+  if layout == "buffer" then
+    vim.api.nvim_win_set_buf(0, buf)
+  else
+    open_float(buf, cfg.float)
+  end
+end
+
 --- Render findings and context into an array of markdown lines.
 --- @param findings table[] Array of { diagnostic, filepath }
 --- @param context table|nil Review context metadata
@@ -172,8 +211,8 @@ function M.open(id)
     if winid ~= -1 then
       vim.api.nvim_set_current_win(winid)
     else
-      vim.cmd("vsplit")
-      vim.api.nvim_win_set_buf(0, buf_id)
+      open_window(buf_id)
+      set_win_opts(0)
     end
     vim.api.nvim_set_option_value("modifiable", true, { buf = buf_id })
     vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
@@ -181,26 +220,20 @@ function M.open(id)
     return
   end
 
+  local layout = require("coderabbit.config").get().show.layout
+
   buf_id = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(buf_id, "coderabbit://review")
   vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf_id })
-  vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf_id })
+  vim.api.nvim_set_option_value("bufhidden", layout == "buffer" and "hide" or "wipe", { buf = buf_id })
   vim.api.nvim_set_option_value("swapfile", false, { buf = buf_id })
   vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf_id })
 
   vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
   vim.api.nvim_set_option_value("modifiable", false, { buf = buf_id })
 
-  vim.cmd("vsplit")
-  vim.api.nvim_win_set_buf(0, buf_id)
-
-  vim.api.nvim_set_option_value("number", false, { win = 0 })
-  vim.api.nvim_set_option_value("relativenumber", false, { win = 0 })
-  vim.api.nvim_set_option_value("signcolumn", "no", { win = 0 })
-  vim.api.nvim_set_option_value("wrap", true, { win = 0 })
-  vim.api.nvim_set_option_value("linebreak", true, { win = 0 })
-  vim.api.nvim_set_option_value("spell", false, { win = 0 })
-  vim.api.nvim_set_option_value("conceallevel", 2, { win = 0 })
+  open_window(buf_id)
+  set_win_opts(0)
 
   vim.keymap.set("n", "q", function()
     M.close()

@@ -54,6 +54,14 @@ All options are optional. Defaults: >lua
         signs = true,
         underline = true,
       },
+      show = {
+        layout = "float",
+        float = {
+          width = 0.6,
+          height = 0.7,
+          border = "rounded",
+        },
+      },
       on_review_complete = nil,
     })
 <
@@ -72,6 +80,13 @@ diagnostics.virtual_text  Show inline virtual text.
 diagnostics.signs         Show sign column indicators.
 diagnostics.underline     Underline diagnostic ranges.
 
+show.layout             `"float"` or `"buffer"`. Default: `"float"`.
+                        `"float"` opens a centered floating window.
+                        `"buffer"` replaces the current buffer (oil.nvim style).
+show.float.width        Fraction of editor width (0-1). Default: `0.6`.
+show.float.height       Fraction of editor height (0-1). Default: `0.7`.
+show.float.border       Border style for the floating window. Default: `"rounded"`.
+
 on_review_complete  Callback receiving the findings table when a review
                     finishes.
 
@@ -88,8 +103,9 @@ COMMANDS                                                  *coderabbit-commands*
     Clear all CodeRabbit diagnostics.
 
 :CodeRabbitShow [id]                                        *:CodeRabbitShow*
-    Open review results in a vertical split. Pass an `id` from
-    `:CodeRabbitHistory` to view a saved review. Press `q` to close.
+    Open review results. Display mode is controlled by `show.layout`.
+    Pass an `id` from `:CodeRabbitHistory` to view a saved review.
+    Press `q` to close.
 
 :CodeRabbitHistory                                       *:CodeRabbitHistory*
     Browse saved reviews via |vim.ui.select|.
