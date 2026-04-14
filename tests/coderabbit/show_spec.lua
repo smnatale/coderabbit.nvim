@@ -1,23 +1,6 @@
 local show = require("coderabbit.show")
-
-local pass, fail = 0, 0
-
-local function test(name, fn)
-  local ok, err = pcall(fn)
-  if ok then
-    pass = pass + 1
-    print("  PASS  " .. name)
-  else
-    fail = fail + 1
-    print("  FAIL  " .. name .. "\n        " .. err)
-  end
-end
-
-local function eq(a, b)
-  if a ~= b then
-    error(string.format("expected %s, got %s", vim.inspect(b), vim.inspect(a)), 2)
-  end
-end
+local h = require("tests.helpers")
+local test, eq = h.test, h.eq
 
 local function has(lines, pattern)
   for _, line in ipairs(lines) do
@@ -311,8 +294,4 @@ test("is_open: false when no buffer, true when visible", function()
   end)
 end)
 
--- summary
-print(string.format("\n%d passed, %d failed", pass, fail))
-if fail > 0 then
-  vim.cmd("cq1")
-end
+h.summary()

@@ -1,24 +1,7 @@
 local diagnostics = require("coderabbit.diagnostics")
 local parser = require("coderabbit.parser")
-
-local pass, fail = 0, 0
-
-local function test(name, fn)
-  local ok, err = pcall(fn)
-  if ok then
-    pass = pass + 1
-    print("  PASS  " .. name)
-  else
-    fail = fail + 1
-    print("  FAIL  " .. name .. "\n        " .. err)
-  end
-end
-
-local function eq(a, b)
-  if a ~= b then
-    error(string.format("expected %s, got %s", vim.inspect(b), vim.inspect(a)), 2)
-  end
-end
+local h = require("tests.helpers")
+local test, eq = h.test, h.eq
 
 local severity_map = {
   critical = vim.diagnostic.severity.ERROR,
@@ -26,26 +9,24 @@ local severity_map = {
   minor = vim.diagnostic.severity.INFO,
 }
 
--- Helper: reset diagnostics state between tests
 local function reset()
   diagnostics.clear()
 end
 
--- Helper: create a temporary file buffer and return bufnr + absolute path
+local function make_diag(lnum, sev, msg)
+  return { lnum = lnum, col = 0, severity = sev, message = msg, source = "coderabbit" }
+end
+
 local function make_temp_buf(relpath)
   local tmpdir = vim.fn.tempname()
   vim.fn.mkdir(tmpdir, "p")
   local filepath = tmpdir .. "/" .. relpath
-  -- Ensure parent directories exist
   vim.fn.mkdir(vim.fn.fnamemodify(filepath, ":h"), "p")
   vim.fn.writefile({ "line1", "line2", "line3" }, filepath)
-  -- Open in a buffer so it's loaded
   vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-  local bufnr = vim.fn.bufnr(filepath)
-  return bufnr, filepath, tmpdir
+  return vim.fn.bufnr(filepath), filepath, tmpdir
 end
 
--- Helper: simulate what review.lua does with a finding JSON line
 local function simulate_finding(json_line, cwd)
   local event = parser.parse_line(json_line)
   if not event or event.type ~= "finding" then
@@ -65,15 +46,7 @@ end
 test("set: diagnostics appear on loaded buffer", function()
   reset()
   local bufnr, filepath = make_temp_buf("src/foo.ts")
-  local diag = {
-    lnum = 10,
-    col = 0,
-    severity = vim.diagnostic.severity.WARN,
-    message = "Test finding",
-    source = "coderabbit",
-  }
-  diagnostics.set(filepath, { diag })
-
+  diagnostics.set(filepath, { make_diag(10, vim.diagnostic.severity.WARN, "Test finding") })
   local got = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns })
   eq(#got, 1)
   eq(got[1].message, "Test finding")
@@ -83,27 +56,17 @@ end)
 test("set: multiple diagnostics accumulate on same buffer", function()
   reset()
   local bufnr, filepath = make_temp_buf("src/bar.ts")
-  local d1 = { lnum = 5, col = 0, severity = vim.diagnostic.severity.ERROR, message = "First", source = "coderabbit" }
-  local d2 = { lnum = 10, col = 0, severity = vim.diagnostic.severity.INFO, message = "Second", source = "coderabbit" }
-
-  diagnostics.set(filepath, { d1 })
-  diagnostics.set(filepath, { d2 })
-
-  local got = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns })
-  eq(#got, 2)
+  diagnostics.set(filepath, { make_diag(5, vim.diagnostic.severity.ERROR, "First") })
+  diagnostics.set(filepath, { make_diag(10, vim.diagnostic.severity.INFO, "Second") })
+  eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 2)
 end)
 
 test("set: diagnostics appear in global vim.diagnostic.get()", function()
   reset()
   local _, filepath = make_temp_buf("src/global.ts")
-  local diag =
-    { lnum = 0, col = 0, severity = vim.diagnostic.severity.INFO, message = "Global check", source = "coderabbit" }
-  diagnostics.set(filepath, { diag })
-
-  -- This is what Telescope calls: vim.diagnostic.get() with no buffer filter
-  local all = vim.diagnostic.get()
+  diagnostics.set(filepath, { make_diag(0, vim.diagnostic.severity.INFO, "Global check") })
   local found = false
-  for _, d in ipairs(all) do
+  for _, d in ipairs(vim.diagnostic.get()) do
     if d.message == "Global check" and d.source == "coderabbit" then
       found = true
       break
@@ -115,11 +78,8 @@ end)
 test("clear: removes all diagnostics", function()
   reset()
   local bufnr, filepath = make_temp_buf("src/clear.ts")
-  diagnostics.set(filepath, {
-    { lnum = 0, col = 0, severity = vim.diagnostic.severity.INFO, message = "Will be cleared", source = "coderabbit" },
-  })
+  diagnostics.set(filepath, { make_diag(0, vim.diagnostic.severity.INFO, "Will be cleared") })
   eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 1)
-
   diagnostics.clear()
   eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 0)
 end)
@@ -130,7 +90,6 @@ end)
 
 test("e2e: mock CLI finding sets diagnostic on loaded buffer", function()
   reset()
-  -- Create a buffer matching the fileName the CLI would return
   local tmpdir = vim.fn.tempname()
   vim.fn.mkdir(tmpdir .. "/apps/server/src/controllers", "p")
   local filepath = tmpdir .. "/apps/server/src/controllers/stripeController.ts"
@@ -162,7 +121,6 @@ test("e2e: multiple findings from fixture file all become diagnostics", function
   local tmpdir = vim.fn.tempname()
   vim.fn.mkdir(tmpdir .. "/apps/server/src/controllers", "p")
 
-  -- Create buffers for both files referenced in the fixture
   local stripe_path = tmpdir .. "/apps/server/src/controllers/stripeController.ts"
   local class_path = tmpdir .. "/apps/server/src/controllers/classController.ts"
   vim.fn.writefile({ "// mock" }, stripe_path)
@@ -170,7 +128,6 @@ test("e2e: multiple findings from fixture file all become diagnostics", function
   vim.cmd("edit " .. vim.fn.fnameescape(stripe_path))
   vim.cmd("edit " .. vim.fn.fnameescape(class_path))
 
-  -- Read and replay the fixture NDJSON
   local fixture = vim.fn.readfile("tests/fixtures/agent_output.jsonl")
   local finding_count = 0
   for _, line in ipairs(fixture) do
@@ -186,7 +143,6 @@ test("e2e: multiple findings from fixture file all become diagnostics", function
 
   eq(finding_count, 3)
 
-  -- Check all diagnostics are accessible globally (what Telescope uses)
   local all = vim.diagnostic.get()
   local cr_diags = {}
   for _, d in ipairs(all) do
@@ -195,44 +151,25 @@ test("e2e: multiple findings from fixture file all become diagnostics", function
     end
   end
   eq(#cr_diags, 3)
-
-  -- stripeController should have 2 findings
-  local stripe_bufnr = vim.fn.bufnr(stripe_path)
-  local stripe_diags = vim.diagnostic.get(stripe_bufnr, { namespace = diagnostics.ns })
-  eq(#stripe_diags, 2)
-
-  -- classController should have 1 finding
-  local class_bufnr = vim.fn.bufnr(class_path)
-  local class_diags = vim.diagnostic.get(class_bufnr, { namespace = diagnostics.ns })
-  eq(#class_diags, 1)
+  eq(#vim.diagnostic.get(vim.fn.bufnr(stripe_path), { namespace = diagnostics.ns }), 2)
+  eq(#vim.diagnostic.get(vim.fn.bufnr(class_path), { namespace = diagnostics.ns }), 1)
 end)
 
 -- ──────────────────────────────────────────────────────────
--- Tests: file NOT open as a buffer (the likely bug)
+-- Tests: file NOT open as a buffer
 -- ──────────────────────────────────────────────────────────
 
 test("set: diagnostics for unopened file are still retrievable", function()
   reset()
-  -- Create a file but do NOT open it in a buffer
   local tmpdir = vim.fn.tempname()
   vim.fn.mkdir(tmpdir, "p")
   local filepath = tmpdir .. "/not_open.ts"
   vim.fn.writefile({ "// not open" }, filepath)
 
-  diagnostics.set(filepath, {
-    {
-      lnum = 5,
-      col = 0,
-      severity = vim.diagnostic.severity.WARN,
-      message = "Unopened file finding",
-      source = "coderabbit",
-    },
-  })
+  diagnostics.set(filepath, { make_diag(5, vim.diagnostic.severity.WARN, "Unopened file finding") })
 
-  -- This is the key test: can vim.diagnostic.get() find it?
-  local all = vim.diagnostic.get()
   local found = false
-  for _, d in ipairs(all) do
+  for _, d in ipairs(vim.diagnostic.get()) do
     if d.message == "Unopened file finding" then
       found = true
       break
@@ -241,8 +178,4 @@ test("set: diagnostics for unopened file are still retrievable", function()
   assert(found, "diagnostic for unopened file not found in vim.diagnostic.get() — this is the Telescope bug!")
 end)
 
--- summary
-print(string.format("\n%d passed, %d failed", pass, fail))
-if fail > 0 then
-  vim.cmd("cq1")
-end
+h.summary()
