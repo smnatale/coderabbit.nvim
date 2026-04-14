@@ -142,6 +142,78 @@ test("get_actions: only returns actions for diagnostics in range", function()
 end)
 
 -- ──────────────────────────────────────────────────────────
+-- Tests: cleanup
+-- ──────────────────────────────────────────────────────────
+
+test("cleanup: removes matching diagnostic", function()
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1", "line2" })
+  vim.diagnostic.set(diagnostics.ns, bufnr, { h.diag(1, W, "fix this", { "fixed" }) })
+  eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 1)
+  actions.cleanup(bufnr, 1, nil, "fix this", 0)
+  eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 0)
+end)
+
+test("cleanup: shifts later diagnostics by delta", function()
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1", "line2", "line3", "line4" })
+  vim.diagnostic.set(diagnostics.ns, bufnr, {
+    h.diag(1, W, "replace this", { "new1\nnew2\nnew3" }),
+    h.diag(3, I, "later issue", { "fix_later" }, 4),
+  })
+  -- delta = 3 new lines - 1 old line = +2
+  actions.cleanup(bufnr, 1, nil, "replace this", 2)
+  local remaining = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns })
+  eq(#remaining, 1)
+  eq(remaining[1].lnum, 5)
+  eq(remaining[1].end_lnum, 6)
+end)
+
+-- ──────────────────────────────────────────────────────────
+-- Tests: get_actions – WorkspaceEdit
+-- ──────────────────────────────────────────────────────────
+
+test("get_actions: returns edit with WorkspaceEdit", function()
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1", "line2" })
+  vim.diagnostic.set(diagnostics.ns, bufnr, { h.diag(1, W, "issue", { "fixed_line" }) })
+  local result = actions.get_actions(bufnr, range(1))
+  eq(#result, 1)
+  assert(result[1].edit ~= nil, "action should have edit field")
+  assert(result[1].edit.changes ~= nil, "edit should have changes")
+  -- Verify TextEdit structure
+  local uri = vim.uri_from_bufnr(bufnr)
+  local edits = result[1].edit.changes[uri]
+  assert(edits ~= nil, "changes should contain buffer URI")
+  eq(#edits, 1)
+  eq(edits[1].range.start.line, 1)
+  eq(edits[1].range["end"].line, 2)
+  eq(edits[1].newText, "fixed_line\n")
+end)
+
+test("get_actions: multi-line edit has correct range and newText", function()
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1", "line2", "line3", "line4" })
+  vim.diagnostic.set(diagnostics.ns, bufnr, { h.diag(1, E, "replace", { "new1\nnew2" }, 3) })
+  local result = actions.get_actions(bufnr, range(2))
+  eq(#result, 1)
+  local uri = vim.uri_from_bufnr(bufnr)
+  local edit = result[1].edit.changes[uri][1]
+  eq(edit.range.start.line, 1)
+  eq(edit.range["end"].line, 4)
+  eq(edit.newText, "new1\nnew2\n")
+end)
+
+test("get_actions: cleanup command has correct delta", function()
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1", "line2" })
+  vim.diagnostic.set(diagnostics.ns, bufnr, { h.diag(1, W, "issue", { "a\nb\nc" }) })
+  local result = actions.get_actions(bufnr, range(1))
+  eq(result[1].command.command, "coderabbit.cleanup")
+  eq(result[1].command.arguments[1].delta, 2) -- 3 new lines - 1 old = +2
+end)
+
+-- ──────────────────────────────────────────────────────────
 -- Tests: apply – end_lnum disambiguation
 -- ──────────────────────────────────────────────────────────
 
