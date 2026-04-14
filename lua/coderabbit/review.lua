@@ -229,6 +229,34 @@ function M.stop()
   end
 end
 
+function M.restore(id)
+  local entries = storage.list()
+  if #entries == 0 then
+    vim.notify("CodeRabbit: No saved reviews found", vim.log.levels.WARN)
+    return
+  end
+
+  if not id then
+    id = entries[#entries].id
+  end
+
+  local review = storage.load(id)
+  if not review then
+    vim.notify("CodeRabbit: Review #" .. id .. " not found", vim.log.levels.WARN)
+    return
+  end
+
+  diagnostics.clear()
+  local findings = type(review.findings) == "table" and review.findings or {}
+  vim.schedule(function()
+    for _, finding in ipairs(findings) do
+      diagnostics.set(finding.filepath, { finding.diagnostic })
+    end
+
+    vim.notify(string.format("CodeRabbit: Restored %d findings from review #%d", #findings, id), vim.log.levels.INFO)
+  end)
+end
+
 function M.clear()
   diagnostics.clear()
   state.findings = {}

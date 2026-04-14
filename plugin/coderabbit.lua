@@ -48,6 +48,25 @@ end, {
   desc = "Show CodeRabbit review results in a buffer (optional: review ID)",
 })
 
+vim.api.nvim_create_user_command("CodeRabbitRestore", function(args)
+  ensure_setup()
+  local id = nil
+  if args.fargs[1] then
+    id = tonumber(args.fargs[1])
+    if not id then
+      vim.notify("CodeRabbitRestore: invalid review ID: " .. args.fargs[1], vim.log.levels.ERROR)
+      return
+    end
+  end
+  require("coderabbit").restore(id)
+end, {
+  nargs = "?",
+  complete = function()
+    return require("coderabbit.storage").ids()
+  end,
+  desc = "Restore diagnostics from a previous CodeRabbit review (default: most recent)",
+})
+
 vim.api.nvim_create_user_command("CodeRabbitHistory", function()
   ensure_setup()
   require("coderabbit").history()
