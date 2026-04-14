@@ -48,6 +48,7 @@ Run `:checkhealth coderabbit` to verify everything is wired up.
 | `:CodeRabbitStop` | Cancel a running review |
 | `:CodeRabbitClear` | Clear diagnostics |
 | `:CodeRabbitShow [id]` | View results (float or buffer). Defaults to the latest review |
+| `:CodeRabbitRestore [id]` | Reapply diagnostics from a saved review. Defaults to the most recent |
 | `:CodeRabbitHistory` | Browse past reviews |
 
 For your statusline:

@@ -20,6 +20,10 @@ function M.clear()
   require("coderabbit.review").clear()
 end
 
+function M.restore(id)
+  require("coderabbit.review").restore(id)
+end
+
 function M.show(id)
   require("coderabbit.show").open(id)
 end

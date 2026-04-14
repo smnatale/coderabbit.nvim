@@ -107,6 +107,11 @@ COMMANDS                                                  *coderabbit-commands*
     Pass an `id` from `:CodeRabbitHistory` to view a saved review.
     Press `q` to close.
 
+:CodeRabbitRestore [id]                                  *:CodeRabbitRestore*
+    Reapply diagnostics from a saved review. Pass an `id` from
+    `:CodeRabbitHistory` to restore a specific review. Without an `id`,
+    restores the most recent review.
+
 :CodeRabbitHistory                                       *:CodeRabbitHistory*
     Browse saved reviews via |vim.ui.select|.
 
@@ -127,6 +132,9 @@ require("coderabbit").clear()                             *coderabbit.clear()*
 
 require("coderabbit").show({id})                           *coderabbit.show()*
     Open the review buffer. `nil` = current, number = saved.
+
+require("coderabbit").restore({id})                     *coderabbit.restore()*
+    Reapply diagnostics from a saved review. `nil` = most recent.
 
 require("coderabbit").history()                         *coderabbit.history()*
     Open the review history picker.
