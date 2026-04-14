@@ -23,7 +23,7 @@ vim.pack.add({"https://github.com/smnatale/coderabbit.nvim"})
 require("coderabbit").setup()
 
 -- lazy.nvim
-{ "coderabbitai/coderabbit.nvim", opts = {} }
+{ "smnatale/coderabbit.nvim", opts = {} }
 ```
 
 Run `:checkhealth coderabbit` to verify everything is wired up.
