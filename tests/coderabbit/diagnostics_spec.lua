@@ -3,28 +3,8 @@ local parser = require("coderabbit.parser")
 local h = require("tests.helpers")
 local test, eq = h.test, h.eq
 
-local severity_map = {
-  critical = vim.diagnostic.severity.ERROR,
-  major = vim.diagnostic.severity.WARN,
-  minor = vim.diagnostic.severity.INFO,
-}
-
 local function reset()
   diagnostics.clear()
-end
-
-local function make_diag(lnum, sev, msg)
-  return { lnum = lnum, col = 0, severity = sev, message = msg, source = "coderabbit" }
-end
-
-local function make_temp_buf(relpath)
-  local tmpdir = vim.fn.tempname()
-  vim.fn.mkdir(tmpdir, "p")
-  local filepath = tmpdir .. "/" .. relpath
-  vim.fn.mkdir(vim.fn.fnamemodify(filepath, ":h"), "p")
-  vim.fn.writefile({ "line1", "line2", "line3" }, filepath)
-  vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-  return vim.fn.bufnr(filepath), filepath, tmpdir
 end
 
 local function simulate_finding(json_line, cwd)
@@ -32,7 +12,7 @@ local function simulate_finding(json_line, cwd)
   if not event or event.type ~= "finding" then
     return nil
   end
-  local diag, filepath = parser.finding_to_diagnostic(event, cwd, severity_map)
+  local diag, filepath = parser.finding_to_diagnostic(event, cwd, h.severity_map)
   if diag then
     diagnostics.set(filepath, { diag })
   end
@@ -45,26 +25,26 @@ end
 
 test("set: diagnostics appear on loaded buffer", function()
   reset()
-  local bufnr, filepath = make_temp_buf("src/foo.ts")
-  diagnostics.set(filepath, { make_diag(10, vim.diagnostic.severity.WARN, "Test finding") })
+  local bufnr, filepath = h.make_temp_buf("src/foo.ts")
+  diagnostics.set(filepath, { h.diag(10, h.W, "Test finding") })
   local got = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns })
   eq(#got, 1)
   eq(got[1].message, "Test finding")
-  eq(got[1].severity, vim.diagnostic.severity.WARN)
+  eq(got[1].severity, h.W)
 end)
 
 test("set: multiple diagnostics accumulate on same buffer", function()
   reset()
-  local bufnr, filepath = make_temp_buf("src/bar.ts")
-  diagnostics.set(filepath, { make_diag(5, vim.diagnostic.severity.ERROR, "First") })
-  diagnostics.set(filepath, { make_diag(10, vim.diagnostic.severity.INFO, "Second") })
+  local bufnr, filepath = h.make_temp_buf("src/bar.ts")
+  diagnostics.set(filepath, { h.diag(5, h.E, "First") })
+  diagnostics.set(filepath, { h.diag(10, h.I, "Second") })
   eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 2)
 end)
 
 test("set: diagnostics appear in global vim.diagnostic.get()", function()
   reset()
-  local _, filepath = make_temp_buf("src/global.ts")
-  diagnostics.set(filepath, { make_diag(0, vim.diagnostic.severity.INFO, "Global check") })
+  local _, filepath = h.make_temp_buf("src/global.ts")
+  diagnostics.set(filepath, { h.diag(0, h.I, "Global check") })
   local found = false
   for _, d in ipairs(vim.diagnostic.get()) do
     if d.message == "Global check" and d.source == "coderabbit" then
@@ -77,8 +57,8 @@ end)
 
 test("clear: removes all diagnostics", function()
   reset()
-  local bufnr, filepath = make_temp_buf("src/clear.ts")
-  diagnostics.set(filepath, { make_diag(0, vim.diagnostic.severity.INFO, "Will be cleared") })
+  local bufnr, filepath = h.make_temp_buf("src/clear.ts")
+  diagnostics.set(filepath, { h.diag(0, h.I, "Will be cleared") })
   eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 1)
   diagnostics.clear()
   eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 0)
@@ -113,7 +93,7 @@ test("e2e: mock CLI finding sets diagnostic on loaded buffer", function()
   eq(#got, 1)
   eq(got[1].lnum, 98)
   eq(got[1].end_lnum, 102)
-  eq(got[1].severity, vim.diagnostic.severity.ERROR)
+  eq(got[1].severity, h.E)
 end)
 
 test("e2e: multiple findings from fixture file all become diagnostics", function()
@@ -133,7 +113,7 @@ test("e2e: multiple findings from fixture file all become diagnostics", function
   for _, line in ipairs(fixture) do
     local event = parser.parse_line(line)
     if event and event.type == "finding" then
-      local diag, fpath = parser.finding_to_diagnostic(event, tmpdir, severity_map)
+      local diag, fpath = parser.finding_to_diagnostic(event, tmpdir, h.severity_map)
       if diag then
         diagnostics.set(fpath, { diag })
         finding_count = finding_count + 1
@@ -166,7 +146,7 @@ test("set: diagnostics for unopened file are still retrievable", function()
   local filepath = tmpdir .. "/not_open.ts"
   vim.fn.writefile({ "// not open" }, filepath)
 
-  diagnostics.set(filepath, { make_diag(5, vim.diagnostic.severity.WARN, "Unopened file finding") })
+  diagnostics.set(filepath, { h.diag(5, h.W, "Unopened file finding") })
 
   local found = false
   for _, d in ipairs(vim.diagnostic.get()) do

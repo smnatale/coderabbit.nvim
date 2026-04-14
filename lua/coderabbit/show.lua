@@ -128,11 +128,24 @@ function M.render(findings, context, opts)
   return lines
 end
 
-function M.open()
+function M.open(id)
   local review = require("coderabbit.review")
-  local findings = review.get_results()
-  local context = review.get_context()
-  local running = review.is_running()
+  local findings, context, running
+
+  if id then
+    local entry = review.get_review(id)
+    if not entry then
+      vim.notify("CodeRabbit: Review #" .. id .. " not found", vim.log.levels.WARN)
+      return
+    end
+    findings = entry.findings
+    context = entry.context
+    running = false
+  else
+    findings = review.get_results()
+    context = review.get_context()
+    running = review.is_running()
+  end
 
   if #findings == 0 and not running and not context then
     vim.notify("CodeRabbit: No review results. Run :CodeRabbitReview first", vim.log.levels.WARN)

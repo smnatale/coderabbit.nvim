@@ -20,8 +20,12 @@ function M.clear()
   require("coderabbit.review").clear()
 end
 
-function M.show()
-  require("coderabbit.show").open()
+function M.show(id)
+  require("coderabbit.show").open(id)
+end
+
+function M.history()
+  require("coderabbit.history").open()
 end
 
 function M.status()
