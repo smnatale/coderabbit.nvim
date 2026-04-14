@@ -1,6 +1,6 @@
 # 🐰 coderabbit.nvim
 
-[![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/smnatale/coderabbit.nvim?utm_source=oss&utm_medium=github&utm_campaign=smnatale%2Fcoderabbit.nvim&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai) [![CI](https://github.com/smnatale/coderabbit.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/smnatale/coderabbit.nvim/actions/workflows/ci.yml) [![Neovim](https://img.shields.io/badge/Neovim-0.10%2B-green?logo=neovim&logoColor=white)](https://neovim.io)
+[![CI](https://github.com/smnatale/coderabbit.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/smnatale/coderabbit.nvim/actions/workflows/ci.yml) [![Neovim](https://img.shields.io/badge/Neovim-0.10%2B-green?logo=neovim&logoColor=white)](https://neovim.io)
 
 The first Neovim integration for [CodeRabbit](https://coderabbit.link/sam-natale) — bringing the AI code reviewing assistant to your favorite editor!
 
