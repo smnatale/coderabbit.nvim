@@ -5,6 +5,8 @@
 The first Neovim integration for [CodeRabbit](https://coderabbit.link/sam-natale) — bringing the AI code reviewing assistant to your favorite editor!
 
 > Not affiliated with CodeRabbit — just a fan. If you sign up, using the [link above](https://coderabbit.link/sam-natale) helps me out.
+<img width="2396" height="1403" alt="image" src="https://github.com/user-attachments/assets/acb8a567-e527-494c-940a-e05374a4072f" />
+
 
 ## Getting Started
 
