@@ -50,7 +50,14 @@ end, {
 
 vim.api.nvim_create_user_command("CodeRabbitRestore", function(args)
   ensure_setup()
-  local id = args.fargs[1] and tonumber(args.fargs[1]) or nil
+  local id = nil
+  if args.fargs[1] then
+    id = tonumber(args.fargs[1])
+    if not id then
+      vim.notify("CodeRabbitRestore: invalid review ID: " .. args.fargs[1], vim.log.levels.ERROR)
+      return
+    end
+  end
   require("coderabbit").restore(id)
 end, {
   nargs = "?",

@@ -14,13 +14,20 @@ local function flush()
 end
 
 local function cleanup()
+  for _, dir in ipairs(finding_tmpdirs) do
+    vim.fn.delete(dir, "rf")
+  end
+  finding_tmpdirs = {}
   vim.fn.delete(test_dir, "rf")
   diagnostics.clear()
 end
 
+local finding_tmpdirs = {}
+
 local function make_findings(n)
   local tmpdir = vim.fn.tempname()
   vim.fn.mkdir(tmpdir, "p")
+  table.insert(finding_tmpdirs, tmpdir)
   local findings = {}
   for i = 1, n do
     local filepath = tmpdir .. "/file" .. i .. ".ts"

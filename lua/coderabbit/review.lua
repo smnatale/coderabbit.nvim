@@ -247,13 +247,14 @@ function M.restore(id)
   end
 
   diagnostics.clear()
+  local findings = type(review.findings) == "table" and review.findings or {}
   vim.schedule(function()
-    for _, finding in ipairs(review.findings) do
+    for _, finding in ipairs(findings) do
       diagnostics.set(finding.filepath, { finding.diagnostic })
     end
 
     vim.notify(
-      string.format("CodeRabbit: Restored %d findings from review #%d", #review.findings, id),
+      string.format("CodeRabbit: Restored %d findings from review #%d", #findings, id),
       vim.log.levels.INFO
     )
   end)
