@@ -15,6 +15,20 @@ function M.setup()
     underline = cfg.diagnostics.underline,
     severity_sort = true,
   }, M.ns)
+
+  -- Re-attach the code-action LSP client when entering a buffer whose
+  -- diagnostics were set while it was still unloaded.
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = vim.api.nvim_create_augroup("coderabbit_actions", { clear = true }),
+    callback = function(args)
+      local bufnr = args.buf
+      if #vim.diagnostic.get(bufnr, { namespace = M.ns }) > 0 then
+        if #vim.lsp.get_clients({ name = "coderabbit", bufnr = bufnr }) == 0 then
+          require("coderabbit.actions").attach(bufnr)
+        end
+      end
+    end,
+  })
 end
 
 --- Set diagnostics for a file path.
