@@ -259,4 +259,104 @@ test("is_open: false when no buffer, true when visible", function()
   end)
 end)
 
+-- ──────────────────────────────────────────────────────────
+-- Tests: layout modes
+-- ──────────────────────────────────────────────────────────
+
+local config = require("coderabbit.config")
+
+local function with_layout(layout, fn)
+  local prev = config.get().show.layout
+  config.get().show.layout = layout
+  local ok, err = pcall(fn)
+  config.get().show.layout = prev
+  if not ok then
+    error(err, 2)
+  end
+end
+
+test("layout float: opens floating window", function()
+  with_layout("float", function()
+    with_review(one_finding, one_ctx, false, function()
+      show.open()
+      local bufnr = show._get_buf_id()
+      assert(bufnr and vim.api.nvim_buf_is_valid(bufnr), "expected valid buffer")
+      local winid = vim.fn.bufwinid(bufnr)
+      assert(winid ~= -1, "expected buffer in a window")
+      local win_cfg = vim.api.nvim_win_get_config(winid)
+      eq(win_cfg.relative, "editor")
+      assert(win_cfg.width > 0, "expected positive width")
+      assert(win_cfg.height > 0, "expected positive height")
+    end)
+  end)
+end)
+
+test("layout float: close removes floating window", function()
+  with_layout("float", function()
+    with_review(one_finding, one_ctx, false, function()
+      show.open()
+      eq(show.is_open(), true)
+      show.close()
+      eq(show.is_open(), false)
+      eq(show._get_buf_id(), nil)
+    end)
+  end)
+end)
+
+test("layout buffer: opens in current window (no split or float)", function()
+  with_layout("buffer", function()
+    with_review(one_finding, one_ctx, false, function()
+      local win_before = vim.api.nvim_get_current_win()
+      local win_count_before = #vim.api.nvim_list_wins()
+      show.open()
+      local bufnr = show._get_buf_id()
+      assert(bufnr and vim.api.nvim_buf_is_valid(bufnr), "expected valid buffer")
+      eq(vim.api.nvim_get_current_win(), win_before)
+      eq(#vim.api.nvim_list_wins(), win_count_before)
+      local win_cfg = vim.api.nvim_win_get_config(vim.fn.bufwinid(bufnr))
+      eq(win_cfg.relative, "")
+    end)
+  end)
+end)
+
+test("layout buffer: bufhidden is hide", function()
+  with_layout("buffer", function()
+    with_review(one_finding, one_ctx, false, function()
+      show.open()
+      local bufnr = show._get_buf_id()
+      eq(vim.api.nvim_get_option_value("bufhidden", { buf = bufnr }), "hide")
+    end)
+  end)
+end)
+
+test("layout float: bufhidden is wipe", function()
+  with_layout("float", function()
+    with_review(one_finding, one_ctx, false, function()
+      show.open()
+      local bufnr = show._get_buf_id()
+      eq(vim.api.nvim_get_option_value("bufhidden", { buf = bufnr }), "wipe")
+    end)
+  end)
+end)
+
+test("layout float: q keymap closes float", function()
+  with_layout("float", function()
+    with_review(one_finding, { cwd = CWD }, false, function()
+      show.open()
+      local keymaps = vim.api.nvim_buf_get_keymap(show._get_buf_id(), "n")
+      local found = false
+      for _, km in ipairs(keymaps) do
+        if km.lhs == "q" then
+          found = true
+        end
+      end
+      assert(found, "expected q keymap")
+    end)
+  end)
+end)
+
+test("default layout is float", function()
+  eq(config.defaults.show.layout, "float")
+end)
+
 h.summary()

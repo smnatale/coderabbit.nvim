@@ -37,7 +37,7 @@ Run `:checkhealth coderabbit` to verify everything is wired up.
 | `:CodeRabbitReview [type]` | Run a review. Defaults to `all`, or pass `committed`/`uncommitted` |
 | `:CodeRabbitStop` | Cancel a running review |
 | `:CodeRabbitClear` | Clear diagnostics |
-| `:CodeRabbitShow [id]` | View results in a split. Defaults to the latest review |
+| `:CodeRabbitShow [id]` | View results (float or buffer). Defaults to the latest review |
 | `:CodeRabbitHistory` | Browse past reviews |
 
 For your statusline:
@@ -72,6 +72,14 @@ require("coderabbit").setup({
     virtual_text = true,
     signs = true,
     underline = true,
+  },
+  show = {
+    layout = "float",  -- "float" or "buffer"
+    float = {
+      width = 0.6,
+      height = 0.7,
+      border = "rounded",
+    },
   },
   on_review_complete = nil,
 })

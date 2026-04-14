@@ -22,6 +22,14 @@ M.defaults = {
     signs = true,
     underline = true,
   },
+  show = {
+    layout = "float",
+    float = {
+      width = 0.6,
+      height = 0.7,
+      border = "rounded",
+    },
+  },
   on_review_complete = nil,
 }
 
