@@ -253,10 +253,7 @@ function M.restore(id)
       diagnostics.set(finding.filepath, { finding.diagnostic })
     end
 
-    vim.notify(
-      string.format("CodeRabbit: Restored %d findings from review #%d", #findings, id),
-      vim.log.levels.INFO
-    )
+    vim.notify(string.format("CodeRabbit: Restored %d findings from review #%d", #findings, id), vim.log.levels.INFO)
   end)
 end
 
