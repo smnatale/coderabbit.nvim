@@ -13,6 +13,8 @@ local function flush()
   end)
 end
 
+local finding_tmpdirs = {}
+
 local function cleanup()
   for _, dir in ipairs(finding_tmpdirs) do
     vim.fn.delete(dir, "rf")
@@ -21,8 +23,6 @@ local function cleanup()
   vim.fn.delete(test_dir, "rf")
   diagnostics.clear()
 end
-
-local finding_tmpdirs = {}
 
 local function make_findings(n)
   local tmpdir = vim.fn.tempname()
