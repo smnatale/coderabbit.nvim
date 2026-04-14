@@ -1,6 +1,6 @@
 # 🐰 coderabbit.nvim
 
-[![CI](https://github.com/smnatale/coderabbit.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/smnatale/coderabbit.nvim/actions/workflows/ci.yml) [![Neovim](https://img.shields.io/badge/Neovim-0.10%2B-green?logo=neovim&logoColor=white)](https://neovim.io)
+[![CI](https://github.com/smnatale/coderabbit.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/smnatale/coderabbit.nvim/actions/workflows/ci.yml) [![Neovim](https://img.shields.io/badge/Neovim-0.10%2B-green?logo=neovim&logoColor=white)](https://neovim.io) [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/smnatale)
 
 The first Neovim integration for [CodeRabbit](https://coderabbit.link/sam-natale) — bringing the AI code reviewing assistant to your favorite editor!
 
