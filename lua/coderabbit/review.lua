@@ -247,14 +247,16 @@ function M.restore(id)
   end
 
   diagnostics.clear()
-  for _, finding in ipairs(review.findings) do
-    diagnostics.set(finding.filepath, { finding.diagnostic })
-  end
+  vim.schedule(function()
+    for _, finding in ipairs(review.findings) do
+      diagnostics.set(finding.filepath, { finding.diagnostic })
+    end
 
-  vim.notify(
-    string.format("CodeRabbit: Restored %d findings from review #%d", #review.findings, id),
-    vim.log.levels.INFO
-  )
+    vim.notify(
+      string.format("CodeRabbit: Restored %d findings from review #%d", #review.findings, id),
+      vim.log.levels.INFO
+    )
+  end)
 end
 
 function M.clear()

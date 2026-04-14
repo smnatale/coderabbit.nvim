@@ -7,6 +7,12 @@ local test, eq = h.test, h.eq
 local test_dir = vim.fn.tempname() .. "/coderabbit_restore_test"
 storage._set_base_dir(test_dir)
 
+local function flush()
+  vim.wait(10, function()
+    return false
+  end)
+end
+
 local function cleanup()
   vim.fn.delete(test_dir, "rf")
   diagnostics.clear()
@@ -46,6 +52,7 @@ test("restore: restores diagnostics from a specific review", function()
   storage.save(findings, h.context())
 
   review.restore(1)
+  flush()
 
   for _, finding in ipairs(findings) do
     local bufnr = vim.fn.bufnr(finding.filepath)
@@ -63,6 +70,7 @@ test("restore: defaults to most recent review when no ID given", function()
   storage.save(new_findings, h.context("new-branch"))
 
   review.restore(nil)
+  flush()
 
   -- Should have diagnostics from the second review (2 findings)
   local total = 0
@@ -82,7 +90,9 @@ test("restore: clears previous diagnostics before applying", function()
   storage.save(second, h.context())
 
   review.restore(1) -- 3 findings
+  flush()
   review.restore(2) -- 1 finding — should replace, not accumulate
+  flush()
 
   local total = 0
   for _, d in ipairs(vim.diagnostic.get()) do
