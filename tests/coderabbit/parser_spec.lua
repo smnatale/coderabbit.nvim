@@ -135,8 +135,11 @@ test("finding_to_diagnostic: preserves absolute paths", function()
 end)
 
 test("finding_to_diagnostic: nil for missing fileName", function()
-  local diag =
-    parser.finding_to_diagnostic({ severity = "major", codegenInstructions = "Something.", suggestions = {} }, "/tmp/repo", severity_map)
+  local diag = parser.finding_to_diagnostic(
+    { severity = "major", codegenInstructions = "Something.", suggestions = {} },
+    "/tmp/repo",
+    severity_map
+  )
   eq(diag, nil)
 end)
 

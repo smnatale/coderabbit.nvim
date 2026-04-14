@@ -17,8 +17,12 @@ end
 
 local function diag(lnum, sev, msg, suggestions, end_lnum)
   local d = { lnum = lnum, col = 0, severity = sev, message = msg, source = "coderabbit" }
-  if end_lnum then d.end_lnum = end_lnum end
-  if suggestions then d.user_data = { suggestions = suggestions } end
+  if end_lnum then
+    d.end_lnum = end_lnum
+  end
+  if suggestions then
+    d.user_data = { suggestions = suggestions }
+  end
   return d
 end
 
