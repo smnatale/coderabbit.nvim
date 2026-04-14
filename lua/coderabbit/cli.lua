@@ -48,6 +48,7 @@ function M.review(opts, callbacks)
   local stderr_chunks = {}
   local cfg = config.get()
   local timer = nil
+  local timed_out = false
 
   local job_id = vim.fn.jobstart(cmd, {
     cwd = vim.fn.getcwd(),
@@ -79,6 +80,9 @@ function M.review(opts, callbacks)
       if timer then
         vim.fn.timer_stop(timer)
       end
+      if timed_out then
+        return
+      end
       local stderr = table.concat(stderr_chunks, "\n")
       vim.schedule(function()
         if callbacks.on_exit then
@@ -90,6 +94,7 @@ function M.review(opts, callbacks)
 
   if job_id > 0 and cfg.cli.timeout > 0 then
     timer = vim.fn.timer_start(cfg.cli.timeout, function()
+      timed_out = true
       vim.fn.jobstop(job_id)
       vim.schedule(function()
         if callbacks.on_exit then

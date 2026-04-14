@@ -1,0 +1,4 @@
+# Configuration for Semanic Prs Github App
+# https://github.com/Ezard/semantic-prs
+enabled: true
+titleOnly: true
