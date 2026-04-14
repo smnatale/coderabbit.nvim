@@ -8,7 +8,12 @@ local test, eq = h.test, h.eq
 
 local sample = {
   { id = 1, timestamp = os.time(), context = { review_type = "all", current_branch = "main" }, finding_count = 5 },
-  { id = 2, timestamp = os.time(), context = { review_type = "committed", current_branch = "feat/x" }, finding_count = 1 },
+  {
+    id = 2,
+    timestamp = os.time(),
+    context = { review_type = "committed", current_branch = "feat/x" },
+    finding_count = 1,
+  },
   { id = 3, timestamp = os.time(), context = {}, finding_count = 0 },
 }
 
