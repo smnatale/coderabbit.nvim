@@ -20,10 +20,20 @@ function M.apply(bufnr, lnum, end_lnum, suggestion, message)
   local old_count = end_line - lnum
   local delta = #new_lines - old_count
 
-  -- Remove the applied diagnostic (first match only)
+  M.cleanup(bufnr, lnum, end_lnum, message, delta)
+end
+
+--- Remove a diagnostic and shift subsequent ones after an edit has been applied.
+--- @param bufnr number Buffer number
+--- @param lnum number 0-indexed start line of the applied edit
+--- @param end_lnum number|nil 0-indexed end line (nil = single line)
+--- @param message string Diagnostic message (used to identify which diagnostic to remove)
+--- @param delta number Line count change from the edit (positive = lines added, negative = removed)
+function M.cleanup(bufnr, lnum, end_lnum, message, delta)
   local existing = vim.diagnostic.get(bufnr, { namespace = ns })
   local remaining = {}
   local removed = false
+  local end_line = (end_lnum or lnum) + 1
   for _, d in ipairs(existing) do
     if not removed and d.lnum == lnum and d.end_lnum == (end_lnum or lnum) and d.message == message then
       removed = true
@@ -47,6 +57,7 @@ end
 function M.get_actions(bufnr, range)
   local start_line = range.start.line
   local end_line = range["end"].line
+  local uri = vim.uri_from_bufnr(bufnr)
 
   local diags = vim.diagnostic.get(bufnr, { namespace = ns })
   local actions = {}
@@ -59,19 +70,37 @@ function M.get_actions(bufnr, range)
       for i, suggestion in ipairs(suggestions) do
         local title = #suggestions > 1 and string.format("CodeRabbit: Apply fix (%d/%d)", i, #suggestions)
           or "CodeRabbit: Apply fix"
+
+        local edit_end_line = (diag.end_lnum or diag.lnum) + 1
+        local new_lines = vim.split(suggestion, "\n", { plain = true })
+        local delta = #new_lines - (edit_end_line - diag.lnum)
+
         table.insert(actions, {
           title = title,
           kind = "quickfix",
+          edit = {
+            changes = {
+              [uri] = {
+                {
+                  range = {
+                    start = { line = diag.lnum, character = 0 },
+                    ["end"] = { line = edit_end_line, character = 0 },
+                  },
+                  newText = suggestion:gsub("\n*$", "\n"),
+                },
+              },
+            },
+          },
           command = {
             title = title,
-            command = "coderabbit.apply",
+            command = "coderabbit.cleanup",
             arguments = {
               {
                 bufnr = bufnr,
                 lnum = diag.lnum,
                 end_lnum = diag.end_lnum,
-                suggestion = suggestion,
                 message = diag.message,
+                delta = delta,
               },
             },
           },
@@ -98,7 +127,7 @@ function M.attach(bufnr)
               capabilities = {
                 codeActionProvider = true,
                 executeCommandProvider = {
-                  commands = { "coderabbit.apply" },
+                  commands = { "coderabbit.apply", "coderabbit.cleanup" },
                 },
               },
             })
@@ -110,11 +139,17 @@ function M.attach(bufnr)
             local result = M.get_actions(buf, params.range)
             callback(nil, result)
           elseif method == "workspace/executeCommand" then
+            local args = type(params.arguments) == "table" and params.arguments[1]
             if params.command == "coderabbit.apply" then
-              local args = type(params.arguments) == "table" and params.arguments[1]
               if type(args) == "table" and args.bufnr and args.lnum and args.suggestion and args.message then
                 vim.schedule(function()
                   M.apply(args.bufnr, args.lnum, args.end_lnum, args.suggestion, args.message)
+                end)
+              end
+            elseif params.command == "coderabbit.cleanup" then
+              if type(args) == "table" and args.bufnr and args.message and args.delta then
+                vim.schedule(function()
+                  M.cleanup(args.bufnr, args.lnum, args.end_lnum, args.message, args.delta)
                 end)
               end
             end
