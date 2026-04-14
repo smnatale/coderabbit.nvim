@@ -7,7 +7,7 @@ The first Neovim integration for [CodeRabbit](https://coderabbit.link/sam-natale
 > Not affiliated with CodeRabbit — just a fan. If you sign up, using the [link above](https://coderabbit.link/sam-natale) helps me out.
 <img width="2396" height="1403" alt="image" src="https://github.com/user-attachments/assets/acb8a567-e527-494c-940a-e05374a4072f" />
 
-## What It Does
+## Features
 
 - **Inline diagnostics** — CodeRabbit findings show up as native Neovim diagnostics with virtual text, sign column markers, and underlines, just like a real LSP
 - **Code actions** — apply suggested fixes directly from the quickfix menu (`vim.lsp.buf.code_action()`)
