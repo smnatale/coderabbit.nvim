@@ -1,0 +1,123 @@
+*coderabbit.txt*    Neovim plugin for CodeRabbit AI code reviews
+
+==============================================================================
+CONTENTS                                                  *coderabbit-contents*
+
+  1. Introduction ............................ |coderabbit-introduction|
+  2. Setup ................................... |coderabbit-setup|
+  3. Configuration ........................... |coderabbit-configuration|
+  4. Commands ................................ |coderabbit-commands|
+  5. Lua API ................................. |coderabbit-api|
+
+==============================================================================
+INTRODUCTION                                          *coderabbit-introduction*
+
+Run CodeRabbit AI code reviews from Neovim. Findings appear as native
+|vim.diagnostic| entries with virtual text, signs, and code actions.
+
+Requirements:
+- Neovim >= 0.10
+- CodeRabbit CLI (`cr`): https://cli.coderabbit.ai
+
+==============================================================================
+SETUP                                                        *coderabbit-setup*
+
+>lua
+    require("coderabbit").setup({})
+<
+
+Run `:checkhealth coderabbit` to verify CLI installation and auth.
+
+==============================================================================
+CONFIGURATION                                        *coderabbit-configuration*
+
+All options are optional. Defaults: >lua
+    require("coderabbit").setup({
+      cli = {
+        binary = "cr",
+        timeout = 0,
+        extra_args = {},
+      },
+      review = {
+        type = "all",
+        base = nil,
+        base_commit = nil,
+      },
+      diagnostics = {
+        enabled = true,
+        severity_map = {
+          critical = vim.diagnostic.severity.ERROR,
+          major = vim.diagnostic.severity.WARN,
+          minor = vim.diagnostic.severity.INFO,
+        },
+        virtual_text = true,
+        signs = true,
+        underline = true,
+      },
+      on_review_complete = nil,
+    })
+<
+
+cli.binary          Path to the CodeRabbit CLI. Default: `"cr"`
+cli.timeout         Timeout in ms. `0` = no timeout.
+cli.extra_args      Extra arguments for `cr review`.
+
+review.type         `"all"`, `"committed"`, or `"uncommitted"`.
+review.base         Base branch for comparison.
+review.base_commit  Base commit SHA for comparison.
+
+diagnostics.enabled     Populate |vim.diagnostic| with findings.
+diagnostics.severity_map  Map CodeRabbit severities to |vim.diagnostic.severity|.
+diagnostics.virtual_text  Show inline virtual text.
+diagnostics.signs         Show sign column indicators.
+diagnostics.underline     Underline diagnostic ranges.
+
+on_review_complete  Callback receiving the findings table when a review
+                    finishes.
+
+==============================================================================
+COMMANDS                                                  *coderabbit-commands*
+
+:CodeRabbitReview [type]                                  *:CodeRabbitReview*
+    Start a review. Optional: `all`, `committed`, `uncommitted`.
+
+:CodeRabbitStop                                             *:CodeRabbitStop*
+    Cancel a running review.
+
+:CodeRabbitClear                                           *:CodeRabbitClear*
+    Clear all CodeRabbit diagnostics.
+
+:CodeRabbitShow [id]                                        *:CodeRabbitShow*
+    Open review results in a vertical split. Pass an `id` from
+    `:CodeRabbitHistory` to view a saved review. Press `q` to close.
+
+:CodeRabbitHistory                                       *:CodeRabbitHistory*
+    Browse saved reviews via |vim.ui.select|.
+
+==============================================================================
+LUA API                                                       *coderabbit-api*
+
+require("coderabbit").setup({opts})                       *coderabbit.setup()*
+    Configure the plugin.
+
+require("coderabbit").review({opts})                     *coderabbit.review()*
+    Start a review. Accepts `{ type, base, base_commit }`.
+
+require("coderabbit").stop()                               *coderabbit.stop()*
+    Cancel the running review.
+
+require("coderabbit").clear()                             *coderabbit.clear()*
+    Clear diagnostics and reset state.
+
+require("coderabbit").show({id})                           *coderabbit.show()*
+    Open the review buffer. `nil` = current, number = saved.
+
+require("coderabbit").history()                         *coderabbit.history()*
+    Open the review history picker.
+
+require("coderabbit").status()                           *coderabbit.status()*
+    Returns `"⠋ CodeRabbit (12s)"` while reviewing, `nil` when idle.
+    Designed for statusline use.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
