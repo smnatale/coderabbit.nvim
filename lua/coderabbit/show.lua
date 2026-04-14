@@ -212,6 +212,7 @@ function M.open(id)
       vim.api.nvim_set_current_win(winid)
     else
       open_window(buf_id)
+      set_win_opts(0)
     end
     vim.api.nvim_set_option_value("modifiable", true, { buf = buf_id })
     vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, content)
