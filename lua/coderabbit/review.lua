@@ -21,6 +21,8 @@ local state = {
   base_commit = nil,
 }
 
+local storage = require("coderabbit.storage")
+
 local function spinner()
   local idx = math.floor(vim.uv.hrtime() / (1e6 * FRAME_MS)) % #spinner_frames + 1
   return spinner_frames[idx]
@@ -72,6 +74,14 @@ function M.get_context()
     base_commit = state.base_commit,
     start_time = state.start_time,
   }
+end
+
+function M.get_history()
+  return storage.list()
+end
+
+function M.get_review(id)
+  return storage.load(id)
 end
 
 --- Return a short status string for statusline integration.
@@ -198,6 +208,8 @@ function M.run(opts)
       else
         fidget_finish("done (with errors)")
       end
+
+      storage.save(state.findings, M.get_context())
 
       if cfg.on_review_complete then
         cfg.on_review_complete(state.findings)

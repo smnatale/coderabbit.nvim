@@ -36,9 +36,21 @@ end, {
   desc = "Clear CodeRabbit diagnostics",
 })
 
-vim.api.nvim_create_user_command("CodeRabbitShow", function()
+vim.api.nvim_create_user_command("CodeRabbitShow", function(args)
   ensure_setup()
-  require("coderabbit").show()
+  local id = args.fargs[1] and tonumber(args.fargs[1]) or nil
+  require("coderabbit").show(id)
 end, {
-  desc = "Show CodeRabbit review results in a buffer",
+  nargs = "?",
+  complete = function()
+    return require("coderabbit.storage").ids()
+  end,
+  desc = "Show CodeRabbit review results in a buffer (optional: review ID)",
+})
+
+vim.api.nvim_create_user_command("CodeRabbitHistory", function()
+  ensure_setup()
+  require("coderabbit").history()
+end, {
+  desc = "Browse CodeRabbit review history",
 })

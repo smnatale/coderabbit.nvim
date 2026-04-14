@@ -1,6 +1,7 @@
 local parser = require("coderabbit.parser")
 local h = require("tests.helpers")
 local test, eq = h.test, h.eq
+local E, W, I = h.E, h.W, h.I
 
 -- parse_line: edge cases (table-driven)
 
@@ -66,12 +67,6 @@ end
 
 -- finding_to_diagnostic
 
-local severity_map = {
-  critical = vim.diagnostic.severity.ERROR,
-  major = vim.diagnostic.severity.WARN,
-  minor = vim.diagnostic.severity.INFO,
-}
-
 local function make_finding(sev, file, instructions, suggestions)
   return {
     severity = sev,
@@ -89,12 +84,12 @@ test("finding_to_diagnostic: line range", function()
       .. "\n\nIn @src/foo.ts around lines 99 - 103, Something is wrong.",
     { "fixed code" }
   )
-  local diag, filepath = parser.finding_to_diagnostic(finding, "/tmp/repo", severity_map)
+  local diag, filepath = parser.finding_to_diagnostic(finding, "/tmp/repo", h.severity_map)
   assert(diag)
   eq(filepath, "/tmp/repo/src/foo.ts")
   eq(diag.lnum, 98)
   eq(diag.end_lnum, 102)
-  eq(diag.severity, vim.diagnostic.severity.ERROR)
+  eq(diag.severity, E)
   eq(diag.source, "coderabbit")
   assert(diag.user_data.suggestions)
 end)
@@ -105,40 +100,52 @@ test("finding_to_diagnostic: single line", function()
     "src/bar.ts",
     "Verify each finding against the current code and only fix it if needed.\n\nIn @src/bar.ts at line 42, Fix the bug."
   )
-  local diag, filepath = parser.finding_to_diagnostic(finding, "/tmp/repo", severity_map)
+  local diag, filepath = parser.finding_to_diagnostic(finding, "/tmp/repo", h.severity_map)
   assert(diag)
   eq(filepath, "/tmp/repo/src/bar.ts")
   eq(diag.lnum, 41)
   eq(diag.end_lnum, nil)
-  eq(diag.severity, vim.diagnostic.severity.WARN)
+  eq(diag.severity, W)
 end)
 
-test("finding_to_diagnostic: unknown severity falls back to INFO", function()
-  local diag = parser.finding_to_diagnostic(
-    make_finding("unknown", "src/foo.ts", "Something at line 1."),
-    "/tmp/repo",
-    severity_map
-  )
-  eq(diag.severity, vim.diagnostic.severity.INFO)
-end)
-
-test("finding_to_diagnostic: resolves relative paths", function()
-  local _, filepath =
-    parser.finding_to_diagnostic(make_finding("minor", "lib/utils.ts"), "/home/user/project", severity_map)
-  eq(filepath, "/home/user/project/lib/utils.ts")
-end)
-
-test("finding_to_diagnostic: preserves absolute paths", function()
-  local _, filepath =
-    parser.finding_to_diagnostic(make_finding("minor", "/absolute/path/file.ts"), "/home/user/project", severity_map)
-  eq(filepath, "/absolute/path/file.ts")
-end)
+for _, case in ipairs({
+  { "unknown severity falls back to INFO", "unknown", "src/foo.ts", "Something at line 1.", I },
+  {
+    "resolves relative paths",
+    "minor",
+    "lib/utils.ts",
+    nil,
+    nil,
+    "/home/user/project",
+    "/home/user/project/lib/utils.ts",
+  },
+  {
+    "preserves absolute paths",
+    "minor",
+    "/absolute/path/file.ts",
+    nil,
+    nil,
+    "/home/user/project",
+    "/absolute/path/file.ts",
+  },
+}) do
+  test("finding_to_diagnostic: " .. case[1], function()
+    local diag, filepath =
+      parser.finding_to_diagnostic(make_finding(case[2], case[3], case[4]), case[6] or "/tmp/repo", h.severity_map)
+    if case[5] then
+      eq(diag.severity, case[5])
+    end
+    if case[7] then
+      eq(filepath, case[7])
+    end
+  end)
+end
 
 test("finding_to_diagnostic: nil for missing fileName", function()
   local diag = parser.finding_to_diagnostic(
     { severity = "major", codegenInstructions = "Something.", suggestions = {} },
     "/tmp/repo",
-    severity_map
+    h.severity_map
   )
   eq(diag, nil)
 end)

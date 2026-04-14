@@ -1,42 +1,10 @@
 local show = require("coderabbit.show")
 local h = require("tests.helpers")
-local test, eq = h.test, h.eq
-
-local function has(lines, pattern)
-  for _, line in ipairs(lines) do
-    if line:find(pattern, 1, true) then
-      return true
-    end
-  end
-  return false
-end
-
-local function count(lines, pat)
-  local n = 0
-  for _, line in ipairs(lines) do
-    if line:match(pat) then
-      n = n + 1
-    end
-  end
-  return n
-end
-
-local E, W, I = vim.diagnostic.severity.ERROR, vim.diagnostic.severity.WARN, vim.diagnostic.severity.INFO
-local CWD = "/tmp/repo"
+local test, eq, has, count = h.test, h.eq, h.has, h.count
+local E, W, I, CWD = h.E, h.W, h.I, h.CWD
 
 local function f(path, lnum, sev, msg, suggestions, end_lnum)
-  return {
-    filepath = path,
-    diagnostic = {
-      lnum = lnum,
-      end_lnum = end_lnum,
-      col = 0,
-      severity = sev,
-      message = msg,
-      source = "coderabbit",
-      user_data = { suggestions = suggestions or {}, severity_raw = "minor" },
-    },
-  }
+  return h.finding(path, lnum, sev, msg, suggestions, end_lnum)
 end
 
 local function render(findings, ctx, cwd)
@@ -113,12 +81,10 @@ local render_cases = {
 for _, case in ipairs(render_cases) do
   test("render: " .. case[1], function()
     local lines = render(case[2], case[3], case[4])
-    local expected = case[5] or {}
-    local absent = case[6] or {}
-    for _, s in ipairs(expected) do
+    for _, s in ipairs(case[5] or {}) do
       assert(has(lines, s), "expected: " .. s)
     end
-    for _, s in ipairs(absent) do
+    for _, s in ipairs(case[6] or {}) do
       assert(not has(lines, s), "unexpected: " .. s)
     end
   end)
@@ -159,15 +125,14 @@ test("render: multiple suggestions each get a code block", function()
 end)
 
 test("render: file extension to language mapping", function()
-  local cases = {
+  for _, c in ipairs({
     { ".py", "```py" },
     { ".js", "```js" },
     { ".go", "```go" },
     { ".lua", "```lua" },
     { ".rs", "```rs" },
     { ".xyz", "```xyz" },
-  }
-  for _, c in ipairs(cases) do
+  }) do
     local lines = render({ f("/tmp/r/a" .. c[1], 0, I, "x", { "code" }) }, nil, "/tmp/r")
     assert(has(lines, c[2]), "expected " .. c[2] .. " for " .. c[1])
   end
