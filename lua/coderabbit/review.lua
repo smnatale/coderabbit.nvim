@@ -4,6 +4,7 @@ local config = require("coderabbit.config")
 local cli = require("coderabbit.cli")
 local parser = require("coderabbit.parser")
 local diagnostics = require("coderabbit.diagnostics")
+local utils = require("coderabbit.utils")
 
 local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
 local FRAME_MS = 80
@@ -98,13 +99,13 @@ function M.run(opts)
   opts = opts or {}
 
   if M.is_running() then
-    vim.notify("CodeRabbit: Review already in progress", vim.log.levels.WARN)
+    utils.notify("Review already in progress", vim.log.levels.WARN)
     return
   end
 
   if not cli.is_available() then
-    vim.notify(
-      "CodeRabbit: CLI not found. Install with: curl -fsSL https://cli.coderabbit.ai/install.sh | sh",
+    utils.notify(
+      "CLI not found. Install with: curl -fsSL https://cli.coderabbit.ai/install.sh | sh",
       vim.log.levels.ERROR
     )
     return
@@ -116,7 +117,7 @@ function M.run(opts)
   local finding_count = 0
   local got_error = false
 
-  vim.notify("CodeRabbit: Reviewing...")
+  utils.notify("Reviewing...")
 
   state.start_time = os.time()
   state.fidget_handle = fidget_start()
@@ -144,7 +145,7 @@ function M.run(opts)
           local now = os.time()
           if not state.last_notify_time or (now - state.last_notify_time) >= 20 then
             state.last_notify_time = now
-            vim.notify("CodeRabbit: " .. msg, vim.log.levels.INFO)
+            utils.notify(msg)
           end
         end
       elseif event.type == "finding" then
@@ -171,7 +172,7 @@ function M.run(opts)
         if msg:match("[Aa]uth") then
           msg = msg .. "\nRun: cr auth login"
         end
-        vim.notify("CodeRabbit: " .. msg, vim.log.levels.ERROR)
+        utils.notify(msg, vim.log.levels.ERROR)
       end
     end,
 
@@ -182,7 +183,7 @@ function M.run(opts)
 
       if code == -1 then
         fidget_finish("timed out")
-        vim.notify("CodeRabbit: Review timed out", vim.log.levels.ERROR)
+        utils.notify("Review timed out", vim.log.levels.ERROR)
         return
       end
 
@@ -193,18 +194,14 @@ function M.run(opts)
           msg = msg .. "\nRun: cr auth login"
         end
         fidget_finish("failed")
-        vim.notify("CodeRabbit: " .. msg, vim.log.levels.ERROR)
+        utils.notify(msg, vim.log.levels.ERROR)
         return
       end
 
       if not got_error then
-        local summary = string.format(
-          "CodeRabbit: Review complete. %d finding%s. Run :CodeRabbitShow to view.",
-          finding_count,
-          finding_count == 1 and "" or "s"
-        )
-        fidget_finish(string.format("done — %d finding%s", finding_count, finding_count == 1 and "" or "s"))
-        vim.notify(summary, vim.log.levels.INFO)
+        local fc = utils.pluralize(finding_count, "finding")
+        utils.notify("Review complete. " .. fc .. ". Run :CodeRabbitShow to view.")
+        fidget_finish("done — " .. fc)
       else
         fidget_finish("done (with errors)")
       end
@@ -223,16 +220,16 @@ function M.stop()
     fidget_finish("cancelled")
     cli.cancel(state.job_id)
     state.job_id = nil
-    vim.notify("CodeRabbit: Review cancelled", vim.log.levels.INFO)
+    utils.notify("Review cancelled")
   else
-    vim.notify("CodeRabbit: No review in progress", vim.log.levels.WARN)
+    utils.notify("No review in progress", vim.log.levels.WARN)
   end
 end
 
 function M.restore(id)
   local entries = storage.list()
   if #entries == 0 then
-    vim.notify("CodeRabbit: No saved reviews found", vim.log.levels.WARN)
+    utils.notify("No saved reviews found", vim.log.levels.WARN)
     return
   end
 
@@ -242,7 +239,7 @@ function M.restore(id)
 
   local review = storage.load(id)
   if not review then
-    vim.notify("CodeRabbit: Review #" .. id .. " not found", vim.log.levels.WARN)
+    utils.notify("Review #" .. id .. " not found", vim.log.levels.WARN)
     return
   end
 
@@ -253,7 +250,7 @@ function M.restore(id)
       diagnostics.set(finding.filepath, { finding.diagnostic })
     end
 
-    vim.notify(string.format("CodeRabbit: Restored %d findings from review #%d", #findings, id), vim.log.levels.INFO)
+    utils.notify(string.format("Restored %d findings from review #%d", #findings, id))
   end)
 end
 
@@ -266,7 +263,7 @@ function M.clear()
   state.current_branch = nil
   state.base_branch = nil
   state.base_commit = nil
-  vim.notify("CodeRabbit: Cleared", vim.log.levels.INFO)
+  utils.notify("Cleared")
 end
 
 return M

@@ -1,5 +1,6 @@
 local M = {}
 
+local utils = require("coderabbit.utils")
 local base_dir = vim.fn.stdpath("data") .. "/coderabbit"
 
 --- Override the base directory (for testing only).
@@ -79,13 +80,7 @@ function M.save(findings, context)
     path = dir .. "/" .. filename
     suffix = suffix + 1
   end
-  local file = io.open(path, "w")
-  if not file then
-    return nil
-  end
-  local ok = file:write(json)
-  file:close()
-  if not ok then
+  if not utils.write_file(path, json) then
     return nil
   end
   return filename
@@ -103,12 +98,10 @@ function M.list()
 
   local entries = {}
   for i, path in ipairs(files) do
-    local file = io.open(path, "r")
-    if file then
-      local content = file:read("*a")
-      file:close()
-      local ok, data = pcall(vim.json.decode, content)
-      if ok and type(data) == "table" then
+    local content = utils.read_file(path)
+    if content then
+      local data = utils.json_decode(content)
+      if data then
         table.insert(entries, {
           id = i,
           timestamp = data.timestamp,
@@ -134,14 +127,12 @@ function M.load(id)
   if not path then
     return nil
   end
-  local file = io.open(path, "r")
-  if not file then
+  local content = utils.read_file(path)
+  if not content then
     return nil
   end
-  local content = file:read("*a")
-  file:close()
-  local ok, data = pcall(vim.json.decode, content)
-  if not ok or type(data) ~= "table" then
+  local data = utils.json_decode(content)
+  if not data then
     return nil
   end
   data.id = id

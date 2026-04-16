@@ -1,5 +1,7 @@
 local M = {}
 
+local utils = require("coderabbit.utils")
+
 function M.check()
   vim.health.start("coderabbit.nvim")
 
@@ -41,8 +43,8 @@ function M.check()
     -- Authentication
     local auth_raw = vim.fn.system({ binary, "auth", "status", "--agent" })
     if vim.v.shell_error == 0 then
-      local ok, auth = pcall(vim.json.decode, auth_raw)
-      if ok and auth.authenticated then
+      local auth = utils.json_decode(auth_raw)
+      if auth and auth.authenticated then
         local user = auth.user and auth.user.username or "unknown"
         local org = auth.currentOrg and auth.currentOrg.name or "none"
         vim.health.ok("Authenticated as " .. user .. " (org: " .. org .. ")")

@@ -1,5 +1,7 @@
 local M = {}
 
+local utils = require("coderabbit.utils")
+
 local function format_time(timestamp)
   if not timestamp then
     return "unknown"
@@ -20,7 +22,7 @@ function M.format_entry(entry)
   if ctx.review_type then
     table.insert(parts, ctx.review_type)
   end
-  table.insert(parts, string.format("%d finding%s", entry.finding_count, entry.finding_count == 1 and "" or "s"))
+  table.insert(parts, utils.pluralize(entry.finding_count, "finding"))
   return table.concat(parts, "  │  ")
 end
 
@@ -29,7 +31,7 @@ function M.open()
   local entries = storage.list()
 
   if #entries == 0 then
-    vim.notify("CodeRabbit: No saved reviews yet", vim.log.levels.INFO)
+    utils.notify("No saved reviews yet")
     return
   end
 

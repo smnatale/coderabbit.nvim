@@ -1,16 +1,14 @@
 local M = {}
 
+local utils = require("coderabbit.utils")
+
 --- Parse a single NDJSON line from `cr review --agent` output.
 --- Returns a table with at least a `type` field, or nil on parse failure.
 function M.parse_line(line)
   if not line or line == "" then
     return nil
   end
-  local ok, data = pcall(vim.json.decode, line)
-  if not ok or type(data) ~= "table" then
-    return nil
-  end
-  return data
+  return utils.json_decode(line)
 end
 
 --- Strip the boilerplate prefix from codegenInstructions.
