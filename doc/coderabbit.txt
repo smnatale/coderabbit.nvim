@@ -62,6 +62,9 @@ All options are optional. Defaults: >lua
           border = "rounded",
         },
       },
+      quickfix = {
+        auto = false,
+      },
       on_review_complete = nil,
     })
 <
@@ -86,6 +89,9 @@ show.layout             `"float"` or `"buffer"`. Default: `"float"`.
 show.float.width        Fraction of editor width (0-1). Default: `0.6`.
 show.float.height       Fraction of editor height (0-1). Default: `0.7`.
 show.float.border       Border style for the floating window. Default: `"rounded"`.
+
+quickfix.auto           Populate the quickfix list automatically when a review
+                        completes. Default: `false`.
 
 on_review_complete  Callback receiving the findings table when a review
                     finishes.
@@ -115,6 +121,11 @@ COMMANDS                                                  *coderabbit-commands*
 :CodeRabbitHistory                                       *:CodeRabbitHistory*
     Browse saved reviews via |vim.ui.select|.
 
+:CodeRabbitQuickfix [id]                                *:CodeRabbitQuickfix*
+    Populate the quickfix list with findings. Pass an `id` from
+    `:CodeRabbitHistory` to load a saved review. Without an `id`,
+    uses the current review findings. Navigate with |:cnext| and |:cprev|.
+
 ==============================================================================
 LUA API                                                       *coderabbit-api*
 
@@ -138,6 +149,9 @@ require("coderabbit").restore({id})                     *coderabbit.restore()*
 
 require("coderabbit").history()                         *coderabbit.history()*
     Open the review history picker.
+
+require("coderabbit").quickfix({id})                   *coderabbit.quickfix()*
+    Populate the quickfix list with findings. `nil` = current, number = saved.
 
 require("coderabbit").status()                           *coderabbit.status()*
     Returns `"⠋ CodeRabbit (12s)"` while reviewing, `nil` when idle.

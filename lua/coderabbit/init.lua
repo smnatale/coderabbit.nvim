@@ -32,6 +32,10 @@ function M.history()
   require("coderabbit.history").open()
 end
 
+function M.quickfix(id)
+  require("coderabbit.quickfix").populate(id)
+end
+
 function M.status()
   return require("coderabbit.review").status()
 end
