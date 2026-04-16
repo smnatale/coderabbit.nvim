@@ -76,7 +76,14 @@ end, {
 
 vim.api.nvim_create_user_command("CodeRabbitQuickfix", function(args)
   ensure_setup()
-  local id = args.fargs[1] and tonumber(args.fargs[1]) or nil
+  local id = nil
+  if args.fargs[1] then
+    id = tonumber(args.fargs[1])
+    if not id then
+      vim.notify("CodeRabbitQuickfix: invalid review ID: " .. args.fargs[1], vim.log.levels.ERROR)
+      return
+    end
+  end
   require("coderabbit").quickfix(id)
 end, {
   nargs = "?",

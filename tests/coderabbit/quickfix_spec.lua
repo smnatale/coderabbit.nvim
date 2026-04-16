@@ -101,6 +101,57 @@ test("findings_to_qf_items: multiple findings produce correct count", function()
 end)
 
 -- ──────────────────────────────────────────────────────────
+-- Tests: populate
+-- ──────────────────────────────────────────────────────────
+
+local storage = require("coderabbit.storage")
+local populate_test_dir = vim.fn.tempname() .. "/coderabbit_populate_test"
+storage._set_base_dir(populate_test_dir)
+
+-- Save a review so storage.load(1) returns it.
+local saved_findings = {
+  h.finding("/tmp/repo/a.lua", 10, E, "error here"),
+  h.finding("/tmp/repo/b.lua", 20, W, "warning here"),
+}
+storage.save(saved_findings, h.context())
+
+test("populate: valid id populates quickfix from stored review", function()
+  quickfix.populate(1)
+  vim.cmd("cclose")
+  local qf = vim.fn.getqflist({ title = 1, items = 1 })
+  eq(qf.title, "CodeRabbit Review #1")
+  eq(#qf.items, 2)
+end)
+
+test("populate: invalid id does not error and leaves quickfix unchanged", function()
+  -- Set a known state first
+  quickfix.set({ h.finding("/tmp/repo/x.lua", 0, I, "baseline") }, { title = "Baseline" })
+  vim.cmd("cclose")
+  -- Call with non-existent id
+  quickfix.populate(999)
+  local qf = vim.fn.getqflist({ title = 1, items = 1 })
+  -- Should remain unchanged (populate returns early with a warning)
+  eq(qf.title, "Baseline")
+  eq(#qf.items, 1)
+end)
+
+test("populate: nil id with no review context warns and leaves quickfix unchanged", function()
+  -- Set a known state first
+  quickfix.set({ h.finding("/tmp/repo/x.lua", 0, I, "baseline") }, { title = "Baseline" })
+  vim.cmd("cclose")
+  -- Clear review state so get_results() returns {} and get_context() returns nil
+  require("coderabbit.review").clear()
+  quickfix.populate(nil)
+  local qf = vim.fn.getqflist({ title = 1, items = 1 })
+  -- Should remain unchanged (populate returns early with a warning)
+  eq(qf.title, "Baseline")
+  eq(#qf.items, 1)
+end)
+
+-- Clean up temp dir
+vim.fn.delete(populate_test_dir, "rf")
+
+-- ──────────────────────────────────────────────────────────
 -- Tests: set
 -- ──────────────────────────────────────────────────────────
 

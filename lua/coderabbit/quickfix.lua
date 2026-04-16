@@ -59,7 +59,7 @@ function M.populate(id)
       vim.notify("CodeRabbit: Review #" .. id .. " not found", vim.log.levels.WARN)
       return
     end
-    findings = entry.findings or {}
+    findings = type(entry.findings) == "table" and entry.findings or {}
     title = "CodeRabbit Review #" .. id
   else
     findings = review.get_results()
