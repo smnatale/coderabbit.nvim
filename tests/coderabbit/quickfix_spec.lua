@@ -148,9 +148,6 @@ test("populate: nil id with no review context warns and leaves quickfix unchange
   eq(#qf.items, 1)
 end)
 
--- Clean up temp dir
-vim.fn.delete(populate_test_dir, "rf")
-
 -- ──────────────────────────────────────────────────────────
 -- Tests: set
 -- ──────────────────────────────────────────────────────────
@@ -184,3 +181,6 @@ test("set: replaces existing quickfix content", function()
 end)
 
 h.summary()
+
+-- Clean up temp dir after all tests complete
+vim.fn.delete(populate_test_dir, "rf")
