@@ -37,6 +37,7 @@ end
 function M.set(filepath, diagnostics)
   filepath = vim.fn.fnamemodify(filepath, ":p")
   local bufnr = vim.fn.bufadd(filepath)
+  vim.fn.bufload(bufnr)
   -- Append to existing diagnostics for this buffer
   local existing = vim.diagnostic.get(bufnr, { namespace = M.ns })
   local merged = vim.list_extend(existing, diagnostics)
