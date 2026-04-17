@@ -73,3 +73,22 @@ vim.api.nvim_create_user_command("CodeRabbitHistory", function()
 end, {
   desc = "Browse CodeRabbit review history",
 })
+
+vim.api.nvim_create_user_command("CodeRabbitQuickfix", function(args)
+  ensure_setup()
+  local id = nil
+  if args.fargs[1] then
+    id = tonumber(args.fargs[1])
+    if not id then
+      vim.notify("CodeRabbitQuickfix: invalid review ID: " .. args.fargs[1], vim.log.levels.ERROR)
+      return
+    end
+  end
+  require("coderabbit").quickfix(id)
+end, {
+  nargs = "?",
+  complete = function()
+    return require("coderabbit.storage").ids()
+  end,
+  desc = "Populate quickfix list with CodeRabbit findings (optional: review ID)",
+})

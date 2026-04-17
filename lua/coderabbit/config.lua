@@ -30,6 +30,9 @@ M.defaults = {
       border = "rounded",
     },
   },
+  quickfix = {
+    auto = false,
+  },
   on_review_complete = nil,
 }
 

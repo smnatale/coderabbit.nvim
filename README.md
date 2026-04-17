@@ -14,6 +14,7 @@ The first Neovim integration for [CodeRabbit](https://coderabbit.link/sam-natale
 - **Review viewer** — read the full review in a floating window or buffer, with findings grouped by file, severity levels, and syntax-highlighted code suggestions
 - **Review types** — review all changes, only committed changes, or only uncommitted changes, with optional base branch/commit comparison
 - **Review history** — browse and revisit past reviews, persisted to disk across sessions
+- **Quickfix integration** — send findings to the quickfix list for fast `:cnext`/`:cprev` navigation
 - **Statusline integration** — drop `require("coderabbit").status()` into your statusline for a live spinner while reviews run
 
 ## Getting Started
@@ -49,6 +50,7 @@ Run `:checkhealth coderabbit` to verify everything is wired up.
 | `:CodeRabbitClear` | Clear diagnostics |
 | `:CodeRabbitShow [id]` | View results (float or buffer). Defaults to the latest review |
 | `:CodeRabbitRestore [id]` | Reapply diagnostics from a saved review. Defaults to the most recent |
+| `:CodeRabbitQuickfix [id]` | Populate quickfix list with findings |
 | `:CodeRabbitHistory` | Browse past reviews |
 
 For your statusline:
@@ -91,6 +93,9 @@ require("coderabbit").setup({
       height = 0.7,
       border = "rounded",
     },
+  },
+  quickfix = {
+    auto = false,   -- populate on review complete
   },
   on_review_complete = nil,
 })
