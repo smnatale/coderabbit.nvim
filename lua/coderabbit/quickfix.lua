@@ -1,5 +1,7 @@
 local M = {}
 
+local utils = require("coderabbit.utils")
+
 local severity_types = {
   [vim.diagnostic.severity.ERROR] = "E",
   [vim.diagnostic.severity.WARN] = "W",
@@ -56,7 +58,7 @@ function M.populate(id)
   if id then
     local entry = review.get_review(id)
     if not entry then
-      vim.notify("CodeRabbit: Review #" .. id .. " not found", vim.log.levels.WARN)
+      utils.notify("Review #" .. id .. " not found", vim.log.levels.WARN)
       return
     end
     findings = type(entry.findings) == "table" and entry.findings or {}
@@ -64,7 +66,7 @@ function M.populate(id)
   else
     findings = review.get_results()
     if #findings == 0 and not review.get_context() then
-      vim.notify("CodeRabbit: No review results. Run :CodeRabbitReview first", vim.log.levels.WARN)
+      utils.notify("No review results. Run :CodeRabbitReview first", vim.log.levels.WARN)
       return
     end
     title = "CodeRabbit Review"

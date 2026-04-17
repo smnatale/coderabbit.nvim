@@ -1,5 +1,6 @@
 local M = {}
 
+local utils = require("coderabbit.utils")
 local buf_id = nil
 
 local severity_labels = vim.diagnostic.severity
@@ -174,7 +175,7 @@ function M.open(id)
   if id then
     local entry = review.get_review(id)
     if not entry then
-      vim.notify("CodeRabbit: Review #" .. id .. " not found", vim.log.levels.WARN)
+      utils.notify("Review #" .. id .. " not found", vim.log.levels.WARN)
       return
     end
     findings = entry.findings
@@ -187,7 +188,7 @@ function M.open(id)
   end
 
   if #findings == 0 and not running and not context then
-    vim.notify("CodeRabbit: No review results. Run :CodeRabbitReview first", vim.log.levels.WARN)
+    utils.notify("No review results. Run :CodeRabbitReview first", vim.log.levels.WARN)
     return
   end
 
@@ -198,9 +199,8 @@ function M.open(id)
       content,
       1,
       string.format(
-        "> **Review in progress...** Showing %d finding%s so far. Run `:CodeRabbitShow` again to refresh.",
-        #findings,
-        #findings == 1 and "" or "s"
+        "> **Review in progress...** Showing %s so far. Run `:CodeRabbitShow` again to refresh.",
+        utils.pluralize(#findings, "finding")
       )
     )
   end
