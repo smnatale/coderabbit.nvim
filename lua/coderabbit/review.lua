@@ -211,6 +211,12 @@ function M.run(opts)
 
       storage.save(state.findings, M.get_context())
 
+      if type(cfg.quickfix) == "table" and cfg.quickfix.auto and #state.findings > 0 then
+        require("coderabbit.quickfix").set(state.findings, {
+          title = "CodeRabbit Review",
+        })
+      end
+
       if cfg.on_review_complete then
         cfg.on_review_complete(state.findings)
       end
