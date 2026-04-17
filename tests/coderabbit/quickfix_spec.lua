@@ -183,4 +183,4 @@ end)
 h.summary()
 
 -- Clean up temp dir after all tests complete
-vim.fn.delete(populate_test_dir, 'rf')
+vim.fn.delete(populate_test_dir, "rf")
