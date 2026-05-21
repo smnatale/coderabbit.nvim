@@ -7,6 +7,12 @@ local function f(path, lnum, sev, msg, suggestions, end_lnum)
   return h.finding(path, lnum, sev, msg, suggestions, end_lnum)
 end
 
+local function severity_f(path, lnum, sev, raw, msg)
+  local finding = f(path, lnum, sev, msg)
+  finding.diagnostic.user_data.severity_raw = raw
+  return finding
+end
+
 local function render(findings, ctx, cwd)
   return show.render(findings, ctx, { cwd = cwd or CWD })
 end
@@ -117,6 +123,28 @@ test("render: multiple files sorted alphabetically", function()
   end
   eq(files[1], "## a.ts")
   eq(files[2], "## z.ts")
+end)
+
+test("render: severity filter limits findings and shows count", function()
+  local filter = assert(require("coderabbit.severity").parse_filter("critical"))
+  local lines = show.render({
+    severity_f(CWD .. "/a.ts", 0, E, "critical", "critical issue"),
+    severity_f(CWD .. "/b.ts", 0, W, "major", "major issue"),
+  }, { cwd = CWD, review_type = "all" }, { cwd = CWD, severity_filter = filter })
+
+  assert(has(lines, "**Severity:** critical"), "expected severity metadata")
+  assert(has(lines, "**Findings:** 1 of 2"), "expected filtered count")
+  assert(has(lines, "critical issue"), "expected matching finding")
+  assert(not has(lines, "major issue"), "unexpected filtered finding")
+end)
+
+test("render: severity filter with no matches shows filtered empty state", function()
+  local filter = assert(require("coderabbit.severity").parse_filter("critical"))
+  local lines = show.render({
+    severity_f(CWD .. "/b.ts", 0, W, "major", "major issue"),
+  }, nil, { cwd = CWD, severity_filter = filter })
+
+  assert(has(lines, "No findings match severity: critical"), "expected filtered empty state")
 end)
 
 test("render: multiple suggestions each get a code block", function()

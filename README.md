@@ -48,10 +48,12 @@ Run `:checkhealth coderabbit` to verify everything is wired up.
 | `:CodeRabbitReview [type]` | Run a review. Defaults to `all`, or pass `committed`/`uncommitted` |
 | `:CodeRabbitStop` | Cancel a running review |
 | `:CodeRabbitClear` | Clear diagnostics |
-| `:CodeRabbitShow [id]` | View results (float or buffer). Defaults to the latest review |
+| `:CodeRabbitShow [id] [severity]` | View results (float or buffer). Defaults to the latest review; severity can be `critical`, `major`, or `minor` |
 | `:CodeRabbitRestore [id]` | Reapply diagnostics from a saved review. Defaults to the most recent |
-| `:CodeRabbitQuickfix [id]` | Populate quickfix list with findings |
+| `:CodeRabbitQuickfix [id] [severity]` | Populate quickfix list with findings |
 | `:CodeRabbitHistory` | Browse past reviews |
+
+Examples: `:CodeRabbitShow critical` shows only critical findings from the latest review, and `:CodeRabbitShow 1 critical` shows only critical findings from saved review `1`.
 
 For your statusline:
 
@@ -77,6 +79,7 @@ require("coderabbit").setup({
   },
   diagnostics = {
     enabled = true,
+    severity_filter = nil, -- nil/all, "critical", "major", "minor", or a list
     severity_map = {
       critical = vim.diagnostic.severity.ERROR,
       major = vim.diagnostic.severity.WARN,
@@ -88,6 +91,7 @@ require("coderabbit").setup({
   },
   show = {
     layout = "float",  -- "float" or "buffer"
+    severity_filter = nil,
     float = {
       width = 0.6,
       height = 0.7,
@@ -96,6 +100,7 @@ require("coderabbit").setup({
   },
   quickfix = {
     auto = false,   -- populate on review complete
+    severity_filter = nil,
   },
   on_review_complete = nil,
 })

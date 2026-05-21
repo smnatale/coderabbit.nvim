@@ -1,4 +1,5 @@
 local diagnostics = require("coderabbit.diagnostics")
+local config = require("coderabbit.config")
 local review = require("coderabbit.review")
 local storage = require("coderabbit.storage")
 local h = require("tests.helpers")
@@ -35,6 +36,17 @@ local function make_findings(n)
     table.insert(findings, h.finding(filepath, i * 10, h.W, "finding " .. i))
   end
   return findings
+end
+
+local function make_severity_finding(raw, sev, name)
+  local tmpdir = vim.fn.tempname()
+  vim.fn.mkdir(tmpdir, "p")
+  table.insert(finding_tmpdirs, tmpdir)
+  local filepath = tmpdir .. "/" .. name .. ".ts"
+  vim.fn.writefile({ "// mock" }, filepath)
+  local finding = h.finding(filepath, 1, sev, raw .. " finding")
+  finding.diagnostic.user_data.severity_raw = raw
+  return finding
 end
 
 -- ──────────────────────────────────────────────────────────
@@ -108,6 +120,34 @@ test("restore: clears previous diagnostics before applying", function()
     end
   end
   eq(total, 1)
+end)
+
+test("restore: honors diagnostics severity filter", function()
+  cleanup()
+  local findings = {
+    make_severity_finding("critical", h.E, "critical"),
+    make_severity_finding("major", h.W, "major"),
+  }
+  storage.save(findings, h.context())
+
+  local prev = config.get().diagnostics.severity_filter
+  config.get().diagnostics.severity_filter = "critical"
+  local ok, err = pcall(function()
+    review.restore(1)
+    flush()
+
+    local total = 0
+    for _, d in ipairs(vim.diagnostic.get()) do
+      if d.source == "coderabbit" then
+        total = total + 1
+      end
+    end
+    eq(total, 1)
+  end)
+  config.get().diagnostics.severity_filter = prev
+  if not ok then
+    error(err, 2)
+  end
 end)
 
 cleanup()
