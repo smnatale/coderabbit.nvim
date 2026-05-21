@@ -1,4 +1,5 @@
 local storage = require("coderabbit.storage")
+local config = require("coderabbit.config")
 local h = require("tests.helpers")
 local test, eq = h.test, h.eq
 
@@ -15,6 +16,15 @@ local function make_findings(n)
     table.insert(findings, h.finding(h.CWD .. "/file" .. i .. ".ts", i * 10, h.W, "finding " .. i))
   end
   return findings
+end
+
+local function with_history_max(max, fn)
+  config.setup({ history = { max_entries = max } })
+  local ok, err = pcall(fn)
+  config.setup({})
+  if not ok then
+    error(err, 2)
+  end
 end
 
 -- ──────────────────────────────────────────────────────────
@@ -78,6 +88,21 @@ end)
 test("ids: returns empty when no reviews", function()
   cleanup()
   eq(#storage.ids(), 0)
+end)
+
+test("save: prunes oldest reviews according to history.max_entries", function()
+  cleanup()
+  with_history_max(3, function()
+    for i = 1, 5 do
+      storage.save(make_findings(1), h.context("review-" .. i))
+    end
+
+    local entries = storage.list()
+    eq(#entries, 3)
+    eq(entries[1].context.current_branch, "review-3")
+    eq(entries[2].context.current_branch, "review-4")
+    eq(entries[3].context.current_branch, "review-5")
+  end)
 end)
 
 cleanup()

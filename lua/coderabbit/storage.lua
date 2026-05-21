@@ -1,5 +1,6 @@
 local M = {}
 
+local config = require("coderabbit.config")
 local utils = require("coderabbit.utils")
 local base_dir = vim.fn.stdpath("data") .. "/coderabbit"
 
@@ -53,6 +54,85 @@ local function ts_filename(ts)
   return os.date("%Y-%m-%d_%H-%M-%S", ts)
 end
 
+local function review_file_parts(path)
+  local name = vim.fn.fnamemodify(path, ":t")
+  local stamp, suffix = name:match("^(%d%d%d%d%-%d%d%-%d%d_%d%d%-%d%d%-%d%d)_?(%d*)%.json$")
+  if not stamp then
+    return name, 0, name
+  end
+  return stamp, tonumber(suffix) or 0, name
+end
+
+local function sorted_review_files(dir)
+  local files = vim.fn.glob(dir .. "/*.json", false, true)
+  table.sort(files, function(a, b)
+    local a_stamp, a_suffix, a_name = review_file_parts(a)
+    local b_stamp, b_suffix, b_name = review_file_parts(b)
+
+    if a_stamp ~= b_stamp then
+      return a_stamp < b_stamp
+    end
+    if a_suffix ~= b_suffix then
+      return a_suffix < b_suffix
+    end
+    return a_name < b_name
+  end)
+  return files
+end
+
+local function max_entries()
+  local history_cfg = config.get().history
+  if type(history_cfg) ~= "table" then
+    return nil
+  end
+
+  local raw_max = history_cfg.max_entries
+  if type(raw_max) ~= "number" and type(raw_max) ~= "string" then
+    return nil
+  end
+
+  local max = tonumber(raw_max)
+  if not max or max < 1 then
+    return nil
+  end
+  return math.floor(max)
+end
+
+local function prune_old_reviews(dir)
+  local max = max_entries()
+  if not max then
+    return
+  end
+
+  local files = sorted_review_files(dir)
+  local remove_count = #files - max
+  for i = 1, remove_count do
+    vim.fn.delete(files[i])
+  end
+end
+
+local function next_filename(dir, base)
+  local prefix = base .. "_"
+  local max_suffix = -1
+
+  for _, path in ipairs(vim.fn.glob(dir .. "/" .. base .. "*.json", false, true)) do
+    local name = vim.fn.fnamemodify(path, ":t")
+    if name == base .. ".json" then
+      max_suffix = math.max(max_suffix, 0)
+    elseif name:sub(1, #prefix) == prefix and name:sub(-5) == ".json" then
+      local suffix = tonumber(name:sub(#prefix + 1, -6))
+      if suffix then
+        max_suffix = math.max(max_suffix, suffix)
+      end
+    end
+  end
+
+  if max_suffix < 0 then
+    return base .. ".json"
+  end
+  return base .. "_" .. (max_suffix + 1) .. ".json"
+end
+
 --- Save a completed review to disk.
 --- @param findings table[] Array of { diagnostic, filepath }
 --- @param context table|nil Review context metadata
@@ -72,17 +152,12 @@ function M.save(findings, context)
   local json = vim.json.encode(entry)
   -- Avoid collisions when multiple reviews finish in the same second
   local base = ts_filename(ts)
-  local filename = base .. ".json"
+  local filename = next_filename(dir, base)
   local path = dir .. "/" .. filename
-  local suffix = 1
-  while vim.fn.filereadable(path) == 1 do
-    filename = base .. "_" .. suffix .. ".json"
-    path = dir .. "/" .. filename
-    suffix = suffix + 1
-  end
   if not utils.write_file(path, json) then
     return nil
   end
+  prune_old_reviews(dir)
   return filename
 end
 
@@ -93,8 +168,7 @@ end
 function M.list()
   local dir = repo_dir()
   ensure_dir(dir)
-  local files = vim.fn.glob(dir .. "/*.json", false, true)
-  table.sort(files)
+  local files = sorted_review_files(dir)
 
   local entries = {}
   for i, path in ipairs(files) do
@@ -120,8 +194,7 @@ end
 --- @return table|nil
 function M.load(id)
   local dir = repo_dir()
-  local files = vim.fn.glob(dir .. "/*.json", false, true)
-  table.sort(files)
+  local files = sorted_review_files(dir)
 
   local path = files[id]
   if not path then
@@ -144,7 +217,7 @@ end
 function M.ids()
   local dir = repo_dir()
   ensure_dir(dir)
-  local files = vim.fn.glob(dir .. "/*.json", false, true)
+  local files = sorted_review_files(dir)
   local ids = {}
   for i = 1, #files do
     table.insert(ids, tostring(i))

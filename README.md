@@ -97,6 +97,9 @@ require("coderabbit").setup({
   quickfix = {
     auto = false,   -- populate on review complete
   },
+  history = {
+    max_entries = 50, -- keep the most recent saved reviews per repo
+  },
   on_review_complete = nil,
 })
 ```

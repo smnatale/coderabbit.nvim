@@ -33,6 +33,9 @@ M.defaults = {
   quickfix = {
     auto = false,
   },
+  history = {
+    max_entries = 50,
+  },
   on_review_complete = nil,
 }
 
