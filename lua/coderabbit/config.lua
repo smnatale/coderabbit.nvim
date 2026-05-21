@@ -36,6 +36,9 @@ M.defaults = {
     auto = false,
     severity_filter = nil,
   },
+  history = {
+    max_entries = 50,
+  },
   on_review_complete = nil,
 }
 

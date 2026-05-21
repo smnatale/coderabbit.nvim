@@ -68,6 +68,9 @@ All options are optional. Defaults: >lua
         auto = false,
         severity_filter = nil,
       },
+      history = {
+        max_entries = 50,
+      },
       on_review_complete = nil,
     })
 <
@@ -103,6 +106,9 @@ quickfix.auto           Populate the quickfix list automatically when a review
 quickfix.severity_filter
                         Default severity filter for |:CodeRabbitQuickfix| and
                         automatic quickfix population.
+
+history.max_entries     Maximum saved reviews kept per repo. Default: `50`.
+                        Set to `0` to keep all saved reviews.
 
 on_review_complete  Callback receiving the findings table when a review
                     finishes.

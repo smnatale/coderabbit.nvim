@@ -102,6 +102,9 @@ require("coderabbit").setup({
     auto = false,   -- populate on review complete
     severity_filter = nil,
   },
+  history = {
+    max_entries = 50, -- keep the most recent saved reviews per repo
+  },
   on_review_complete = nil,
 })
 ```
