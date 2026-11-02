@@ -36,6 +36,7 @@ function M.normalize(value)
 end
 
 local function append_filter_values(values, out)
+  local all = false
   for _, value in ipairs(values) do
     if type(value) ~= "string" then
       return "severity filters must be strings"
@@ -43,15 +44,17 @@ local function append_filter_values(values, out)
     for part in value:gmatch("[^,%s]+") do
       local lower = part:lower()
       if lower == "all" or lower == "*" then
-        return nil, true
+        all = true
+      else
+        local normalized = M.normalize(lower)
+        if not normalized then
+          return "invalid severity: " .. part
+        end
+        out[normalized] = true
       end
-      local normalized = M.normalize(lower)
-      if not normalized then
-        return "invalid severity: " .. part
-      end
-      out[normalized] = true
     end
   end
+  return nil, all
 end
 
 --- Parse a severity filter from nil, string, or string array.

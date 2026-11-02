@@ -41,6 +41,12 @@ test("parse_filter: all disables filtering", function()
   eq(filter, nil)
 end)
 
+test("parse_filter: rejects unknown severity alongside all", function()
+  local filter, err = severity.parse_filter("all,blocker")
+  eq(filter, nil)
+  assert(err and err:find("invalid severity", 1, true), "expected invalid severity error")
+end)
+
 test("parse_filter: rejects unknown severity", function()
   local filter, err = severity.parse_filter("blocker")
   eq(filter, nil)

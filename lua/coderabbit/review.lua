@@ -112,14 +112,16 @@ function M.run(opts)
     return
   end
 
-  state.findings = {}
-  state.cwd = vim.fn.getcwd()
   local cfg = config.get()
   local diagnostics_filter, diagnostics_filter_err = severity.parse_filter(cfg.diagnostics.severity_filter)
   if diagnostics_filter_err then
     utils.notify("Invalid diagnostics severity filter: " .. diagnostics_filter_err, vim.log.levels.ERROR)
     return
   end
+
+  diagnostics.clear()
+  state.findings = {}
+  state.cwd = vim.fn.getcwd()
   local finding_count = 0
   local got_error = false
 
