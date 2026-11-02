@@ -24,16 +24,16 @@ function M.restore(id)
   require("coderabbit.review").restore(id)
 end
 
-function M.show(id)
-  require("coderabbit.show").open(id)
+function M.show(id, opts)
+  require("coderabbit.show").open(id, opts)
 end
 
 function M.history()
   require("coderabbit.history").open()
 end
 
-function M.quickfix(id)
-  require("coderabbit.quickfix").populate(id)
+function M.quickfix(id, opts)
+  require("coderabbit.quickfix").populate(id, opts)
 end
 
 function M.status()

@@ -1,6 +1,7 @@
 local M = {}
 
 local utils = require("coderabbit.utils")
+local severity_filter = require("coderabbit.severity")
 
 local severity_types = {
   [vim.diagnostic.severity.ERROR] = "E",
@@ -16,8 +17,12 @@ end
 
 --- Convert findings to quickfix items (pure function, no side effects).
 --- @param findings table[] Array of { diagnostic, filepath }
+--- @param opts table|nil { severity_filter = table }
 --- @return table[] Array of { filename, lnum, col, text, type } for setqflist()
-function M.findings_to_qf_items(findings)
+function M.findings_to_qf_items(findings, opts)
+  opts = opts or {}
+  findings = severity_filter.filter_findings(findings, opts.severity_filter)
+
   local items = {}
   for _, f in ipairs(findings) do
     local d = f.diagnostic
@@ -37,12 +42,24 @@ end
 
 --- Populate the quickfix list from findings and open the window.
 --- @param findings table[] Array of { diagnostic, filepath }
---- @param opts table|nil { title = string }
+--- @param opts table|nil { title = string, severity_filter = table|string|string[] }
 function M.set(findings, opts)
   opts = opts or {}
-  local items = M.findings_to_qf_items(findings)
+  local filter, err = severity_filter.parse_filter(opts.severity_filter)
+  if err then
+    utils.notify("Invalid severity filter: " .. err, vim.log.levels.ERROR)
+    return
+  end
+
+  local title = opts.title or "CodeRabbit Review"
+  local filter_label = severity_filter.describe(filter)
+  if filter_label then
+    title = title .. " (" .. filter_label .. ")"
+  end
+
+  local items = M.findings_to_qf_items(findings, { severity_filter = filter })
   vim.fn.setqflist({}, "r", {
-    title = opts.title or "CodeRabbit Review",
+    title = title,
     items = items,
   })
   vim.cmd("copen")
@@ -50,7 +67,9 @@ end
 
 --- Populate quickfix from current review or a saved review by ID.
 --- @param id number|nil Review ID (nil = current in-memory findings)
-function M.populate(id)
+--- @param opts table|nil { severity_filter = table|string|string[] }
+function M.populate(id, opts)
+  opts = opts or {}
   local findings, title
 
   local review = require("coderabbit.review")
@@ -72,7 +91,14 @@ function M.populate(id)
     title = "CodeRabbit Review"
   end
 
-  M.set(findings, { title = title })
+  local filter_arg
+  if opts.severity_filter ~= nil then
+    filter_arg = opts.severity_filter
+  else
+    filter_arg = require("coderabbit.config").get().quickfix.severity_filter
+  end
+
+  M.set(findings, { title = title, severity_filter = filter_arg })
 end
 
 return M

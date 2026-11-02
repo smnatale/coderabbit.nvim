@@ -1,6 +1,7 @@
 local M = {}
 
 local utils = require("coderabbit.utils")
+local severity = require("coderabbit.severity")
 local buf_id = nil
 
 local severity_labels = vim.diagnostic.severity
@@ -79,29 +80,41 @@ end
 --- @return string[]
 function M.render(findings, context, opts)
   opts = opts or {}
+  local total_findings = #findings
+  local filter = opts.severity_filter
+  local filter_label = severity.describe(filter)
+  findings = severity.filter_findings(findings, filter)
+
   local lines = {}
 
   table.insert(lines, "# CodeRabbit Review")
   table.insert(lines, "")
 
-  if context then
+  if context or filter_label then
     local parts = {}
-    if context.review_type then
+    if context and context.review_type then
       table.insert(parts, "**Type:** " .. context.review_type)
     end
-    if context.current_branch then
+    if context and context.current_branch then
       table.insert(parts, "**Branch:** " .. context.current_branch)
     end
-    if context.base_branch then
+    if context and context.base_branch then
       table.insert(parts, "**Base:** " .. context.base_branch)
     end
-    if context.base_commit then
+    if context and context.base_commit then
       table.insert(parts, "**Commit:** " .. context.base_commit)
+    end
+    if filter_label then
+      table.insert(parts, "**Severity:** " .. filter_label)
     end
     if #parts > 0 then
       table.insert(lines, table.concat(parts, " | "))
     end
-    table.insert(lines, string.format("**Findings:** %d", #findings))
+    if filter_label then
+      table.insert(lines, string.format("**Findings:** %d of %d", #findings, total_findings))
+    else
+      table.insert(lines, string.format("**Findings:** %d", #findings))
+    end
     table.insert(lines, "")
   end
 
@@ -109,7 +122,11 @@ function M.render(findings, context, opts)
   table.insert(lines, "")
 
   if #findings == 0 then
-    table.insert(lines, "*No findings -- your code looks good!*")
+    if filter_label then
+      table.insert(lines, "*No findings match severity: " .. filter_label .. ".*")
+    else
+      table.insert(lines, "*No findings -- your code looks good!*")
+    end
     return lines
   end
 
@@ -168,7 +185,8 @@ function M.render(findings, context, opts)
   return lines
 end
 
-function M.open(id)
+function M.open(id, opts)
+  opts = opts or {}
   local review = require("coderabbit.review")
   local findings, context, running
 
@@ -192,15 +210,31 @@ function M.open(id)
     return
   end
 
-  local content = M.render(findings, context, { cwd = context and context.cwd or vim.fn.getcwd() })
+  local filter_arg
+  if opts.severity_filter ~= nil then
+    filter_arg = opts.severity_filter
+  else
+    filter_arg = require("coderabbit.config").get().show.severity_filter
+  end
+  local filter, err = severity.parse_filter(filter_arg)
+  if err then
+    utils.notify("Invalid severity filter: " .. err, vim.log.levels.ERROR)
+    return
+  end
+
+  local content = M.render(findings, context, {
+    cwd = context and context.cwd or vim.fn.getcwd(),
+    severity_filter = filter,
+  })
   if running then
+    local visible_count = #severity.filter_findings(findings, filter)
     table.insert(content, 1, "")
     table.insert(
       content,
       1,
       string.format(
         "> **Review in progress...** Showing %s so far. Run `:CodeRabbitShow` again to refresh.",
-        utils.pluralize(#findings, "finding")
+        utils.pluralize(visible_count, "finding")
       )
     )
   end

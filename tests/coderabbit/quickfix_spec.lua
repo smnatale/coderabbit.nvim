@@ -3,6 +3,12 @@ local h = require("tests.helpers")
 local test, eq = h.test, h.eq
 local E, W, I = h.E, h.W, h.I
 
+local function severity_f(path, lnum, sev, raw, msg)
+  local finding = h.finding(path, lnum, sev, msg)
+  finding.diagnostic.user_data.severity_raw = raw
+  return finding
+end
+
 -- ──────────────────────────────────────────────────────────
 -- Tests: severity_to_type
 -- ──────────────────────────────────────────────────────────
@@ -100,6 +106,17 @@ test("findings_to_qf_items: multiple findings produce correct count", function()
   eq(#items, 3)
 end)
 
+test("findings_to_qf_items: severity filter limits items", function()
+  local filter = assert(require("coderabbit.severity").parse_filter("critical"))
+  local findings = {
+    severity_f("/tmp/repo/a.lua", 1, E, "critical", "one"),
+    severity_f("/tmp/repo/b.lua", 2, W, "major", "two"),
+  }
+  local items = quickfix.findings_to_qf_items(findings, { severity_filter = filter })
+  eq(#items, 1)
+  eq(items[1].filename, "/tmp/repo/a.lua")
+end)
+
 -- ──────────────────────────────────────────────────────────
 -- Tests: populate
 -- ──────────────────────────────────────────────────────────
@@ -177,6 +194,17 @@ test("set: replaces existing quickfix content", function()
   quickfix.set({ h.finding("/tmp/repo/b.lua", 1, W, "second") })
   vim.cmd("cclose")
   local qf = vim.fn.getqflist({ items = 1 })
+  eq(#qf.items, 1)
+end)
+
+test("set: severity filter updates title and items", function()
+  quickfix.set({
+    severity_f("/tmp/repo/a.lua", 0, E, "critical", "critical issue"),
+    severity_f("/tmp/repo/b.lua", 0, W, "major", "major issue"),
+  }, { title = "Filtered", severity_filter = "critical" })
+  vim.cmd("cclose")
+  local qf = vim.fn.getqflist({ title = 1, items = 1 })
+  eq(qf.title, "Filtered (critical)")
   eq(#qf.items, 1)
 end)
 

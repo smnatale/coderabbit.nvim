@@ -45,6 +45,7 @@ All options are optional. Defaults: >lua
       },
       diagnostics = {
         enabled = true,
+        severity_filter = nil,
         severity_map = {
           critical = vim.diagnostic.severity.ERROR,
           major = vim.diagnostic.severity.WARN,
@@ -56,6 +57,7 @@ All options are optional. Defaults: >lua
       },
       show = {
         layout = "float",
+        severity_filter = nil,
         float = {
           width = 0.6,
           height = 0.7,
@@ -64,6 +66,7 @@ All options are optional. Defaults: >lua
       },
       quickfix = {
         auto = false,
+        severity_filter = nil,
       },
       history = {
         max_entries = 50,
@@ -81,6 +84,10 @@ review.base         Base branch for comparison.
 review.base_commit  Base commit SHA for comparison.
 
 diagnostics.enabled     Populate |vim.diagnostic| with findings.
+diagnostics.severity_filter
+                        Limit diagnostics to one or more CodeRabbit severities.
+                        Accepts nil, `"all"`, `"critical"`, `"major"`,
+                        `"minor"`, or a list of those strings.
 diagnostics.severity_map  Map CodeRabbit severities to |vim.diagnostic.severity|.
 diagnostics.virtual_text  Show inline virtual text.
 diagnostics.signs         Show sign column indicators.
@@ -89,12 +96,16 @@ diagnostics.underline     Underline diagnostic ranges.
 show.layout             `"float"` or `"buffer"`. Default: `"float"`.
                         `"float"` opens a centered floating window.
                         `"buffer"` replaces the current buffer (oil.nvim style).
+show.severity_filter    Default severity filter for |:CodeRabbitShow|.
 show.float.width        Fraction of editor width (0-1). Default: `0.6`.
 show.float.height       Fraction of editor height (0-1). Default: `0.7`.
 show.float.border       Border style for the floating window. Default: `"rounded"`.
 
 quickfix.auto           Populate the quickfix list automatically when a review
                         completes. Default: `false`.
+quickfix.severity_filter
+                        Default severity filter for |:CodeRabbitQuickfix| and
+                        automatic quickfix population.
 
 history.max_entries     Maximum saved reviews kept per repo. Default: `50`.
                         Set to `0` to keep all saved reviews.
@@ -114,9 +125,14 @@ COMMANDS                                                  *coderabbit-commands*
 :CodeRabbitClear                                           *:CodeRabbitClear*
     Clear all CodeRabbit diagnostics.
 
-:CodeRabbitShow [id]                                        *:CodeRabbitShow*
+:CodeRabbitShow [id] [severity]                             *:CodeRabbitShow*
     Open review results. Display mode is controlled by `show.layout`.
     Pass an `id` from `:CodeRabbitHistory` to view a saved review.
+    Pass a severity (`critical`, `major`, `minor`) to focus the output.
+    Examples: >
+        :CodeRabbitShow critical
+        :CodeRabbitShow 1 critical
+<
     Press `q` to close.
 
 :CodeRabbitRestore [id]                                  *:CodeRabbitRestore*
@@ -127,10 +143,11 @@ COMMANDS                                                  *coderabbit-commands*
 :CodeRabbitHistory                                       *:CodeRabbitHistory*
     Browse saved reviews via |vim.ui.select|.
 
-:CodeRabbitQuickfix [id]                                *:CodeRabbitQuickfix*
+:CodeRabbitQuickfix [id] [severity]                     *:CodeRabbitQuickfix*
     Populate the quickfix list with findings. Pass an `id` from
     `:CodeRabbitHistory` to load a saved review. Without an `id`,
     uses the current review findings. Navigate with |:cnext| and |:cprev|.
+    Pass a severity (`critical`, `major`, `minor`) to focus the list.
 
 ==============================================================================
 LUA API                                                       *coderabbit-api*
@@ -147,8 +164,9 @@ require("coderabbit").stop()                               *coderabbit.stop()*
 require("coderabbit").clear()                             *coderabbit.clear()*
     Clear diagnostics and reset state.
 
-require("coderabbit").show({id})                           *coderabbit.show()*
+require("coderabbit").show({id}, {opts})                   *coderabbit.show()*
     Open the review buffer. `nil` = current, number = saved.
+    Optional opts: `{ severity_filter = "critical" }`.
 
 require("coderabbit").restore({id})                     *coderabbit.restore()*
     Reapply diagnostics from a saved review. `nil` = most recent.
@@ -156,8 +174,9 @@ require("coderabbit").restore({id})                     *coderabbit.restore()*
 require("coderabbit").history()                         *coderabbit.history()*
     Open the review history picker.
 
-require("coderabbit").quickfix({id})                   *coderabbit.quickfix()*
+require("coderabbit").quickfix({id}, {opts})           *coderabbit.quickfix()*
     Populate the quickfix list with findings. `nil` = current, number = saved.
+    Optional opts: `{ severity_filter = "critical" }`.
 
 require("coderabbit").status()                           *coderabbit.status()*
     Returns `"⠋ CodeRabbit (12s)"` while reviewing, `nil` when idle.

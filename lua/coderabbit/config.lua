@@ -13,6 +13,7 @@ M.defaults = {
   },
   diagnostics = {
     enabled = true,
+    severity_filter = nil,
     severity_map = {
       critical = vim.diagnostic.severity.ERROR,
       major = vim.diagnostic.severity.WARN,
@@ -24,6 +25,7 @@ M.defaults = {
   },
   show = {
     layout = "float",
+    severity_filter = nil,
     float = {
       width = 0.6,
       height = 0.7,
@@ -32,6 +34,7 @@ M.defaults = {
   },
   quickfix = {
     auto = false,
+    severity_filter = nil,
   },
   history = {
     max_entries = 50,

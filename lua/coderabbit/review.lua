@@ -5,6 +5,7 @@ local cli = require("coderabbit.cli")
 local parser = require("coderabbit.parser")
 local diagnostics = require("coderabbit.diagnostics")
 local utils = require("coderabbit.utils")
+local severity = require("coderabbit.severity")
 
 local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
 local FRAME_MS = 80
@@ -111,9 +112,16 @@ function M.run(opts)
     return
   end
 
+  local cfg = config.get()
+  local diagnostics_filter, diagnostics_filter_err = severity.parse_filter(cfg.diagnostics.severity_filter)
+  if diagnostics_filter_err then
+    utils.notify("Invalid diagnostics severity filter: " .. diagnostics_filter_err, vim.log.levels.ERROR)
+    return
+  end
+
+  diagnostics.clear()
   state.findings = {}
   state.cwd = vim.fn.getcwd()
-  local cfg = config.get()
   local finding_count = 0
   local got_error = false
 
@@ -152,8 +160,9 @@ function M.run(opts)
         finding_count = finding_count + 1
         local diag, filepath = parser.finding_to_diagnostic(event, state.cwd, cfg.diagnostics.severity_map)
         if diag then
-          table.insert(state.findings, { diagnostic = diag, filepath = filepath })
-          if cfg.diagnostics.enabled then
+          local finding = { diagnostic = diag, filepath = filepath }
+          table.insert(state.findings, finding)
+          if cfg.diagnostics.enabled and severity.matches(finding, diagnostics_filter) then
             diagnostics.set(filepath, { diag })
           end
         end
@@ -211,6 +220,7 @@ function M.run(opts)
       if type(cfg.quickfix) == "table" and cfg.quickfix.auto and #state.findings > 0 then
         require("coderabbit.quickfix").set(state.findings, {
           title = "CodeRabbit Review",
+          severity_filter = cfg.quickfix.severity_filter,
         })
       end
 
@@ -249,14 +259,25 @@ function M.restore(id)
     return
   end
 
+  local cfg = config.get()
+  local diagnostics_filter, diagnostics_filter_err = severity.parse_filter(cfg.diagnostics.severity_filter)
+  if diagnostics_filter_err then
+    utils.notify("Invalid diagnostics severity filter: " .. diagnostics_filter_err, vim.log.levels.ERROR)
+    return
+  end
+
   diagnostics.clear()
   local findings = type(review.findings) == "table" and review.findings or {}
   vim.schedule(function()
+    local restored = 0
     for _, finding in ipairs(findings) do
-      diagnostics.set(finding.filepath, { finding.diagnostic })
+      if severity.matches(finding, diagnostics_filter) then
+        diagnostics.set(finding.filepath, { finding.diagnostic })
+        restored = restored + 1
+      end
     end
 
-    utils.notify(string.format("Restored %d findings from review #%d", #findings, id))
+    utils.notify(string.format("Restored %d findings from review #%d", restored, id))
   end)
 end
 
