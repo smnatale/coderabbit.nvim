@@ -36,6 +36,14 @@ function M.quickfix(id)
   require("coderabbit.quickfix").populate(id)
 end
 
+function M.resolve()
+  require("coderabbit.actions").mark_at_cursor("resolved")
+end
+
+function M.dismiss()
+  require("coderabbit.actions").mark_at_cursor("dismissed")
+end
+
 function M.status()
   return require("coderabbit.review").status()
 end

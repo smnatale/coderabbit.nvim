@@ -110,5 +110,67 @@ test("restore: clears previous diagnostics before applying", function()
   eq(total, 1)
 end)
 
+local function coderabbit_diags()
+  local out = {}
+  for _, d in ipairs(vim.diagnostic.get()) do
+    if d.source == "coderabbit" then
+      table.insert(out, d)
+    end
+  end
+  return out
+end
+
+test("restore: skips resolved and dismissed findings", function()
+  cleanup()
+  local findings = make_findings(3)
+  findings[1].status = "resolved"
+  findings[3].status = "dismissed"
+  storage.save(findings, h.context())
+
+  review.restore(1)
+  flush()
+
+  local got = coderabbit_diags()
+  eq(#got, 1)
+  eq(got[1].message, "finding 2")
+end)
+
+test("restore: dismissing a restored finding persists across restores", function()
+  cleanup()
+  local filename = storage.save(make_findings(2), h.context())
+
+  review.restore(1)
+  flush()
+
+  local target
+  for _, d in ipairs(coderabbit_diags()) do
+    if d.message == "finding 1" then
+      target = d
+    end
+  end
+  assert(target, "expected finding 1 diagnostic")
+  eq(target.user_data.ref.file, filename)
+  eq(target.user_data.ref.index, 1)
+
+  eq(require("coderabbit.actions").mark(target.bufnr, target, "dismissed"), true)
+  eq(#coderabbit_diags(), 1)
+
+  review.restore(1)
+  flush()
+
+  local got = coderabbit_diags()
+  eq(#got, 1)
+  eq(got[1].message, "finding 2")
+  eq(storage.load(1).findings[1].status, "dismissed")
+end)
+
+test("set_status: rejects unknown statuses and stale refs", function()
+  cleanup()
+  eq(review.set_status({ file = "missing.json", index = 1 }, "resolved"), false)
+  eq(review.set_status({ run = -1, index = 1 }, "resolved"), false)
+  eq(review.set_status({ file = "missing.json", index = 1 }, "bogus"), false)
+  eq(review.set_status(nil, "resolved"), false)
+end)
+
 cleanup()
 h.summary()

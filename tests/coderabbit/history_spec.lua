@@ -38,6 +38,16 @@ test("format_entry: singular finding", function()
   assert(not history.format_entry(sample[2]):find("1 findings", 1, true), "unexpected plural")
 end)
 
+test("format_entry: includes resolved and dismissed counts", function()
+  local s = history.format_entry(vim.tbl_extend("force", sample[1], { resolved_count = 3, dismissed_count = 1 }))
+  assert(s:find("5 findings (3 resolved, 1 dismissed)", 1, true), "expected handled counts, got: " .. s)
+end)
+
+test("format_entry: omits handled counts when none", function()
+  local s = history.format_entry(vim.tbl_extend("force", sample[1], { resolved_count = 0, dismissed_count = 0 }))
+  assert(not s:find("(", 1, true), "unexpected handled counts: " .. s)
+end)
+
 test("format_entry: handles missing context fields", function()
   local s = history.format_entry(sample[3])
   assert(s:find("#3", 1, true), "expected ID")

@@ -90,6 +90,39 @@ for _, case in ipairs(render_cases) do
   end)
 end
 
+local function handled(finding, status)
+  finding.status = status
+  return finding
+end
+
+test("render: handled findings move to Handled section", function()
+  local lines = render({
+    f(CWD .. "/a.ts", 4, W, "still open"),
+    handled(f(CWD .. "/b.ts", 9, E, "was fixed\nmore detail"), "resolved"),
+    handled(f(CWD .. "/c.ts", 0, I, "not relevant"), "dismissed"),
+  }, h.context())
+  assert(has(lines, "**Findings:** 3 (1 open)"), "expected open count in header")
+  assert(has(lines, "## a.ts"), "expected open finding rendered in full")
+  assert(not has(lines, "## b.ts"), "resolved finding should not get a file section")
+  assert(has(lines, "## Handled"), "expected Handled section")
+  assert(has(lines, "- **resolved** `b.ts` Line 10: was fixed"), "expected resolved entry")
+  assert(has(lines, "- **dismissed** `c.ts`: not relevant"), "expected dismissed entry")
+  assert(not has(lines, "more detail"), "handled entry should only show the first line")
+end)
+
+test("render: all findings handled shows notice", function()
+  local lines = render({ handled(f(CWD .. "/a.ts", 4, W, "done"), "resolved") }, h.context())
+  assert(has(lines, "*All findings handled.*"), "expected all-handled notice")
+  assert(has(lines, "## Handled"), "expected Handled section")
+end)
+
+test("render: no handled findings omits Handled section", function()
+  local lines = render({ f(CWD .. "/a.ts", 4, W, "open") }, h.context())
+  assert(has(lines, "**Findings:** 1"), "expected plain count")
+  assert(not has(lines, "open)"), "unexpected open count")
+  assert(not has(lines, "## Handled"), "unexpected Handled section")
+end)
+
 test("render: lnum 0 omits line number", function()
   local lines = render({ f(CWD .. "/a.ts", 0, I, "general note") })
   assert(has(lines, "### [INFO]"), "expected severity")

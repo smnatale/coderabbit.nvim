@@ -176,11 +176,22 @@ function M.list()
     if content then
       local data = utils.json_decode(content)
       if data then
+        local findings = type(data.findings) == "table" and data.findings or {}
+        local resolved, dismissed = 0, 0
+        for _, f in ipairs(findings) do
+          if f.status == "resolved" then
+            resolved = resolved + 1
+          elseif f.status == "dismissed" then
+            dismissed = dismissed + 1
+          end
+        end
         table.insert(entries, {
           id = i,
           timestamp = data.timestamp,
           context = data.context,
-          finding_count = data.findings and #data.findings or 0,
+          finding_count = #findings,
+          resolved_count = resolved,
+          dismissed_count = dismissed,
           filename = vim.fn.fnamemodify(path, ":t"),
         })
       end
@@ -209,7 +220,30 @@ function M.load(id)
     return nil
   end
   data.id = id
+  data.filename = vim.fn.fnamemodify(path, ":t")
   return data
+end
+
+--- Set the status of a single finding in a saved review.
+--- @param filename string Review filename (without path), as returned by save()
+--- @param index number 1-indexed position of the finding in the review
+--- @param status string|nil "resolved", "dismissed", or nil to reopen
+--- @return boolean success
+function M.set_status(filename, index, status)
+  if type(filename) ~= "string" or vim.fn.fnamemodify(filename, ":t") ~= filename then
+    return false
+  end
+  local path = repo_dir() .. "/" .. filename
+  local content = utils.read_file(path)
+  if not content then
+    return false
+  end
+  local data = utils.json_decode(content)
+  if not data or type(data.findings) ~= "table" or type(data.findings[index]) ~= "table" then
+    return false
+  end
+  data.findings[index].status = status
+  return utils.write_file(path, vim.json.encode(data))
 end
 
 --- Return list of existing review IDs as strings (for command completion).

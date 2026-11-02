@@ -50,6 +50,45 @@ function M.cleanup(bufnr, lnum, end_lnum, message, delta)
   vim.diagnostic.set(ns, bufnr, remaining)
 end
 
+--- Persist a status for a diagnostic's finding and remove it from the buffer.
+--- @param bufnr number Buffer number
+--- @param diag table The coderabbit diagnostic (must carry user_data.ref)
+--- @param status string "resolved" or "dismissed"
+--- @return boolean success
+function M.mark(bufnr, diag, status)
+  local ref = diag.user_data and diag.user_data.ref
+  if not require("coderabbit.review").set_status(ref, status) then
+    return false
+  end
+  M.cleanup(bufnr, diag.lnum, diag.end_lnum, diag.message, 0)
+  return true
+end
+
+--- Find the first coderabbit diagnostic with a finding ref covering a line.
+--- @param bufnr number Buffer number
+--- @param lnum number 0-indexed line
+--- @return table|nil diagnostic
+function M.at_line(bufnr, lnum)
+  for _, d in ipairs(vim.diagnostic.get(bufnr, { namespace = ns })) do
+    if d.user_data and d.user_data.ref and d.lnum <= lnum and (d.end_lnum or d.lnum) >= lnum then
+      return d
+    end
+  end
+  return nil
+end
+
+--- Mark the finding under the cursor as resolved or dismissed.
+--- @param status string "resolved" or "dismissed"
+function M.mark_at_cursor(status)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local diag = M.at_line(bufnr, vim.api.nvim_win_get_cursor(0)[1] - 1)
+  if not diag then
+    require("coderabbit.utils").notify("No finding under cursor", vim.log.levels.WARN)
+    return
+  end
+  M.mark(bufnr, diag, status)
+end
+
 --- Build code actions for coderabbit diagnostics overlapping the given range.
 --- @param bufnr number Buffer number
 --- @param range table LSP-style range { start = { line = N }, ["end"] = { line = N } }
@@ -101,10 +140,35 @@ function M.get_actions(bufnr, range)
                 end_lnum = diag.end_lnum,
                 message = diag.message,
                 delta = delta,
+                ref = diag.user_data.ref,
               },
             },
           },
         })
+      end
+
+      if diag.user_data and diag.user_data.ref then
+        for _, entry in ipairs({ { "resolved", "Mark resolved" }, { "dismissed", "Dismiss" } }) do
+          local title = "CodeRabbit: " .. entry[2]
+          table.insert(actions, {
+            title = title,
+            kind = "quickfix",
+            command = {
+              title = title,
+              command = "coderabbit.set_status",
+              arguments = {
+                {
+                  bufnr = bufnr,
+                  lnum = diag.lnum,
+                  end_lnum = diag.end_lnum,
+                  message = diag.message,
+                  ref = diag.user_data.ref,
+                  status = entry[1],
+                },
+              },
+            },
+          })
+        end
       end
     end
   end
@@ -127,7 +191,7 @@ function M.attach(bufnr)
               capabilities = {
                 codeActionProvider = true,
                 executeCommandProvider = {
-                  commands = { "coderabbit.apply", "coderabbit.cleanup" },
+                  commands = { "coderabbit.apply", "coderabbit.cleanup", "coderabbit.set_status" },
                 },
               },
             })
@@ -150,6 +214,20 @@ function M.attach(bufnr)
               if type(args) == "table" and args.bufnr and args.message and args.delta then
                 vim.schedule(function()
                   M.cleanup(args.bufnr, args.lnum, args.end_lnum, args.message, args.delta)
+                  if args.ref then
+                    require("coderabbit.review").set_status(args.ref, "resolved")
+                  end
+                end)
+              end
+            elseif params.command == "coderabbit.set_status" then
+              if type(args) == "table" and args.bufnr and args.lnum and args.message and args.ref and args.status then
+                vim.schedule(function()
+                  M.mark(args.bufnr, {
+                    lnum = args.lnum,
+                    end_lnum = args.end_lnum,
+                    message = args.message,
+                    user_data = { ref = args.ref },
+                  }, args.status)
                 end)
               end
             end

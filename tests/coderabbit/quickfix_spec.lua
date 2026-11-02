@@ -123,6 +123,22 @@ test("populate: valid id populates quickfix from stored review", function()
   eq(#qf.items, 2)
 end)
 
+test("populate: excludes resolved and dismissed findings", function()
+  local handled = {
+    h.finding("/tmp/repo/a.lua", 10, E, "open one"),
+    h.finding("/tmp/repo/b.lua", 20, W, "resolved one"),
+    h.finding("/tmp/repo/c.lua", 30, W, "dismissed one"),
+  }
+  handled[2].status = "resolved"
+  handled[3].status = "dismissed"
+  storage.save(handled, h.context())
+  quickfix.populate(#storage.ids())
+  vim.cmd("cclose")
+  local qf = vim.fn.getqflist({ items = 1 })
+  eq(#qf.items, 1)
+  assert(qf.items[1].text:find("open one", 1, true), "expected only the open finding")
+end)
+
 test("populate: invalid id does not error and leaves quickfix unchanged", function()
   -- Set a known state first
   quickfix.set({ h.finding("/tmp/repo/x.lua", 0, I, "baseline") }, { title = "Baseline" })

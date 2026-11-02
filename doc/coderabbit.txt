@@ -132,6 +132,17 @@ COMMANDS                                                  *coderabbit-commands*
     `:CodeRabbitHistory` to load a saved review. Without an `id`,
     uses the current review findings. Navigate with |:cnext| and |:cprev|.
 
+:CodeRabbitResolve                                       *:CodeRabbitResolve*
+    Mark the finding under the cursor as resolved. Also available as a code
+    action, and applied automatically when you accept a suggested fix.
+
+:CodeRabbitDismiss                                       *:CodeRabbitDismiss*
+    Dismiss the finding under the cursor. Also available as a code action.
+
+    Resolved and dismissed findings are saved with the review. They are
+    skipped by `:CodeRabbitRestore` and `:CodeRabbitQuickfix`, and listed
+    under "Handled" in `:CodeRabbitShow`.
+
 ==============================================================================
 LUA API                                                       *coderabbit-api*
 
@@ -158,6 +169,12 @@ require("coderabbit").history()                         *coderabbit.history()*
 
 require("coderabbit").quickfix({id})                   *coderabbit.quickfix()*
     Populate the quickfix list with findings. `nil` = current, number = saved.
+
+require("coderabbit").resolve()                         *coderabbit.resolve()*
+    Mark the finding under the cursor as resolved.
+
+require("coderabbit").dismiss()                         *coderabbit.dismiss()*
+    Dismiss the finding under the cursor.
 
 require("coderabbit").status()                           *coderabbit.status()*
     Returns `"⠋ CodeRabbit (12s)"` while reviewing, `nil` when idle.
