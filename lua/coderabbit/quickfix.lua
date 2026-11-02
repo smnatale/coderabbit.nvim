@@ -72,7 +72,7 @@ function M.populate(id)
     title = "CodeRabbit Review"
   end
 
-  M.set(findings, { title = title })
+  M.set(utils.open_findings(findings), { title = title })
 end
 
 return M

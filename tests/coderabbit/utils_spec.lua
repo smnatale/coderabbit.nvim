@@ -124,4 +124,18 @@ for _, case in ipairs({
   end)
 end
 
+-- ──────────────────────────────────────────────────────────
+-- Tests: open_findings
+-- ──────────────────────────────────────────────────────────
+
+test("open_findings: excludes resolved and dismissed findings", function()
+  local open = utils.open_findings({
+    { filepath = "a", status = "resolved" },
+    { filepath = "b" },
+    { filepath = "c", status = "dismissed" },
+  })
+  eq(#open, 1)
+  eq(open[1].filepath, "b")
+end)
+
 h.summary()

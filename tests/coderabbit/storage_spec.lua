@@ -105,5 +105,47 @@ test("save: prunes oldest reviews according to history.max_entries", function()
   end)
 end)
 
+test("load: includes the review filename", function()
+  cleanup()
+  local filename = storage.save(make_findings(1), h.context())
+  eq(storage.load(1).filename, filename)
+end)
+
+test("set_status: persists status on the targeted finding only", function()
+  cleanup()
+  local filename = storage.save(make_findings(3), h.context())
+  eq(storage.set_status(filename, 2, "dismissed"), true)
+  local entry = storage.load(1)
+  eq(entry.findings[1].status, nil)
+  eq(entry.findings[2].status, "dismissed")
+  eq(entry.findings[3].status, nil)
+  eq(entry.findings[2].diagnostic.message, "finding 2")
+end)
+
+test("set_status: list reports resolved and dismissed counts", function()
+  cleanup()
+  local filename = storage.save(make_findings(4), h.context())
+  storage.set_status(filename, 1, "resolved")
+  storage.set_status(filename, 2, "resolved")
+  storage.set_status(filename, 4, "dismissed")
+  local entry = storage.list()[1]
+  eq(entry.finding_count, 4)
+  eq(entry.resolved_count, 2)
+  eq(entry.dismissed_count, 1)
+end)
+
+for _, case in ipairs({
+  { "missing file", "does-not-exist.json", 1 },
+  { "out of range index", nil, 99 },
+  { "path traversal in filename", "../escape.json", 1 },
+}) do
+  test("set_status: returns false for " .. case[1], function()
+    cleanup()
+    local filename = storage.save(make_findings(1), h.context())
+    eq(storage.set_status(case[2] or filename, case[3], "resolved"), false)
+    eq(storage.load(1).findings[1].status, nil)
+  end)
+end
+
 cleanup()
 h.summary()

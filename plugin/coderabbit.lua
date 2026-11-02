@@ -67,6 +67,20 @@ end, {
   desc = "Restore diagnostics from a previous CodeRabbit review (default: most recent)",
 })
 
+vim.api.nvim_create_user_command("CodeRabbitResolve", function()
+  ensure_setup()
+  require("coderabbit").resolve()
+end, {
+  desc = "Mark the CodeRabbit finding under the cursor as resolved",
+})
+
+vim.api.nvim_create_user_command("CodeRabbitDismiss", function()
+  ensure_setup()
+  require("coderabbit").dismiss()
+end, {
+  desc = "Dismiss the CodeRabbit finding under the cursor",
+})
+
 vim.api.nvim_create_user_command("CodeRabbitHistory", function()
   ensure_setup()
   require("coderabbit").history()

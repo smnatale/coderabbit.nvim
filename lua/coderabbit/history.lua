@@ -22,7 +22,18 @@ function M.format_entry(entry)
   if ctx.review_type then
     table.insert(parts, ctx.review_type)
   end
-  table.insert(parts, utils.pluralize(entry.finding_count, "finding"))
+  local count = utils.pluralize(entry.finding_count, "finding")
+  local handled = {}
+  if (entry.resolved_count or 0) > 0 then
+    table.insert(handled, entry.resolved_count .. " resolved")
+  end
+  if (entry.dismissed_count or 0) > 0 then
+    table.insert(handled, entry.dismissed_count .. " dismissed")
+  end
+  if #handled > 0 then
+    count = count .. " (" .. table.concat(handled, ", ") .. ")"
+  end
+  table.insert(parts, count)
   return table.concat(parts, "  │  ")
 end
 

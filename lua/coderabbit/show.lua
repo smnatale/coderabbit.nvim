@@ -80,6 +80,7 @@ end
 function M.render(findings, context, opts)
   opts = opts or {}
   local lines = {}
+  local open = utils.open_findings(findings)
 
   table.insert(lines, "# CodeRabbit Review")
   table.insert(lines, "")
@@ -101,7 +102,11 @@ function M.render(findings, context, opts)
     if #parts > 0 then
       table.insert(lines, table.concat(parts, " | "))
     end
-    table.insert(lines, string.format("**Findings:** %d", #findings))
+    if #open < #findings then
+      table.insert(lines, string.format("**Findings:** %d (%d open)", #findings, #open))
+    else
+      table.insert(lines, string.format("**Findings:** %d", #findings))
+    end
     table.insert(lines, "")
   end
 
@@ -113,10 +118,15 @@ function M.render(findings, context, opts)
     return lines
   end
 
+  if #open == 0 then
+    table.insert(lines, "*All findings handled.*")
+    table.insert(lines, "")
+  end
+
   -- Group findings by filepath
   local by_file = {}
   local file_order = {}
-  for _, f in ipairs(findings) do
+  for _, f in ipairs(open) do
     local rel = relative_path(f.filepath, opts.cwd)
     if not by_file[rel] then
       by_file[rel] = {}
@@ -163,6 +173,31 @@ function M.render(findings, context, opts)
         end
       end
     end
+  end
+
+  if #open < #findings then
+    table.insert(lines, "---")
+    table.insert(lines, "")
+    table.insert(lines, "## Handled")
+    table.insert(lines, "")
+    for _, f in ipairs(findings) do
+      if f.status then
+        local diag = f.diagnostic
+        local loc = line_label(diag)
+        local first_line = diag.message:match("^([^\n]*)") or diag.message
+        table.insert(
+          lines,
+          string.format(
+            "- **%s** `%s`%s: %s",
+            f.status,
+            relative_path(f.filepath, opts.cwd),
+            loc and (" " .. loc) or "",
+            first_line
+          )
+        )
+      end
+    end
+    table.insert(lines, "")
   end
 
   return lines

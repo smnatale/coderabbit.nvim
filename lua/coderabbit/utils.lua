@@ -55,4 +55,17 @@ function M.pluralize(n, word)
   return string.format("%d %s", n, n == 1 and word or word .. "s")
 end
 
+--- Return the findings that have not been resolved or dismissed.
+--- @param findings table[] Array of { diagnostic, filepath, status? }
+--- @return table[]
+function M.open_findings(findings)
+  local open = {}
+  for _, f in ipairs(findings) do
+    if not f.status then
+      table.insert(open, f)
+    end
+  end
+  return open
+end
+
 return M

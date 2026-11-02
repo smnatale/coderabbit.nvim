@@ -214,6 +214,152 @@ test("get_actions: cleanup command has correct delta", function()
 end)
 
 -- ──────────────────────────────────────────────────────────
+-- Tests: resolve / dismiss
+-- ──────────────────────────────────────────────────────────
+
+local function ref_diag(lnum, msg, suggestions, end_lnum)
+  local d = h.diag(lnum, W, msg, suggestions or {}, end_lnum)
+  d.user_data.ref = { file = "review.json", index = 1 }
+  return d
+end
+
+--- Stub review.set_status, recording calls and returning `result`.
+local function with_set_status(result, fn)
+  local review = require("coderabbit.review")
+  local orig = review.set_status
+  local calls = {}
+  review.set_status = function(ref, status)
+    table.insert(calls, { ref = ref, status = status })
+    return result
+  end
+  local ok, err = pcall(fn, calls)
+  review.set_status = orig
+  if not ok then
+    error(err, 2)
+  end
+end
+
+test("get_actions: adds resolve and dismiss actions for diagnostics with a ref", function()
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1" })
+  vim.diagnostic.set(diagnostics.ns, bufnr, { ref_diag(1, "issue", { "fix" }) })
+  local result = actions.get_actions(bufnr, range(1))
+  eq(#result, 3)
+  eq(result[1].title, "CodeRabbit: Apply fix")
+  eq(result[1].command.arguments[1].ref.file, "review.json")
+  eq(result[2].title, "CodeRabbit: Mark resolved")
+  eq(result[2].command.command, "coderabbit.set_status")
+  eq(result[2].command.arguments[1].status, "resolved")
+  eq(result[2].edit, nil)
+  eq(result[3].title, "CodeRabbit: Dismiss")
+  eq(result[3].command.arguments[1].status, "dismissed")
+end)
+
+test("mark: removes the diagnostic when status is saved", function()
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1", "line2" })
+  vim.diagnostic.set(diagnostics.ns, bufnr, { ref_diag(1, "issue"), h.diag(2, W, "other") })
+  with_set_status(true, function(calls)
+    local diag = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns, lnum = 1 })[1]
+    eq(actions.mark(bufnr, diag, "dismissed"), true)
+    eq(#calls, 1)
+    eq(calls[1].status, "dismissed")
+    eq(calls[1].ref.index, 1)
+  end)
+  local remaining = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns })
+  eq(#remaining, 1)
+  eq(remaining[1].message, "other")
+end)
+
+test("mark: keeps the diagnostic when status cannot be saved", function()
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1" })
+  vim.diagnostic.set(diagnostics.ns, bufnr, { ref_diag(1, "issue") })
+  with_set_status(false, function()
+    local diag = vim.diagnostic.get(bufnr, { namespace = diagnostics.ns })[1]
+    eq(actions.mark(bufnr, diag, "resolved"), false)
+  end)
+  eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 1)
+end)
+
+for _, case in ipairs({
+  { "finds diagnostic on its line", 1, "issue" },
+  { "finds multi-line diagnostic from a middle line", 3, "range" },
+  { "ignores lines without a finding", 0, nil },
+}) do
+  test("at_line: " .. case[1], function()
+    reset()
+    local bufnr = h.make_buf({ "a", "b", "c", "d", "e" })
+    vim.diagnostic.set(diagnostics.ns, bufnr, {
+      ref_diag(1, "issue"),
+      ref_diag(2, "range", {}, 4),
+      h.diag(0, W, "no ref"),
+    })
+    local d = actions.at_line(bufnr, case[2])
+    eq(d and d.message, case[3])
+  end)
+end
+
+local function with_command(command, command_args, fn)
+  reset()
+  local bufnr = h.make_buf({ "line0", "line1", "line2" })
+  actions.attach(bufnr)
+  local client
+  vim.wait(2000, function()
+    client = vim.lsp.get_clients({ name = "coderabbit", bufnr = bufnr })[1]
+    return client ~= nil
+  end)
+  assert(client, "coderabbit client should be attached")
+  vim.diagnostic.set(diagnostics.ns, bufnr, { ref_diag(1, "issue", { "fix" }) })
+  local responded = false
+  client.request("workspace/executeCommand", {
+    command = command,
+    arguments = { command_args(bufnr) },
+  }, function()
+    responded = true
+  end, bufnr)
+  vim.wait(2000, function()
+    return responded
+  end)
+  -- Let the scheduled handler run
+  vim.wait(10, function()
+    return false
+  end)
+  fn(bufnr)
+  client.stop()
+end
+
+test("executeCommand: set_status saves status and removes diagnostic", function()
+  with_set_status(true, function(calls)
+    with_command("coderabbit.set_status", function(bufnr)
+      return {
+        bufnr = bufnr,
+        lnum = 1,
+        message = "issue",
+        ref = { file = "review.json", index = 1 },
+        status = "dismissed",
+      }
+    end, function(bufnr)
+      eq(#calls, 1)
+      eq(calls[1].status, "dismissed")
+      eq(#vim.diagnostic.get(bufnr, { namespace = diagnostics.ns }), 0)
+    end)
+  end)
+end)
+
+test("executeCommand: cleanup after applying a fix marks finding resolved", function()
+  with_set_status(true, function(calls)
+    with_command("coderabbit.cleanup", function(bufnr)
+      return { bufnr = bufnr, lnum = 1, message = "issue", delta = 0, ref = { file = "review.json", index = 1 } }
+    end, function()
+      eq(#calls, 1)
+      eq(calls[1].status, "resolved")
+      eq(calls[1].ref.file, "review.json")
+    end)
+  end)
+end)
+
+-- ──────────────────────────────────────────────────────────
 -- Tests: apply – end_lnum disambiguation
 -- ──────────────────────────────────────────────────────────
 

@@ -20,7 +20,15 @@ local state = {
   current_branch = nil,
   base_branch = nil,
   base_commit = nil,
+  run_token = nil,
 }
+
+-- Maps a run token to the review filename it was saved as, so diagnostics
+-- from earlier runs in this session can still be resolved or dismissed.
+local run_files = {}
+local run_counter = 0
+
+local STATUSES = { resolved = true, dismissed = true }
 
 local storage = require("coderabbit.storage")
 
@@ -113,6 +121,9 @@ function M.run(opts)
 
   state.findings = {}
   state.cwd = vim.fn.getcwd()
+  run_counter = run_counter + 1
+  state.run_token = run_counter
+  local run_token = state.run_token
   local cfg = config.get()
   local finding_count = 0
   local got_error = false
@@ -152,6 +163,7 @@ function M.run(opts)
         finding_count = finding_count + 1
         local diag, filepath = parser.finding_to_diagnostic(event, state.cwd, cfg.diagnostics.severity_map)
         if diag then
+          diag.user_data.ref = { run = run_token, index = #state.findings + 1 }
           table.insert(state.findings, { diagnostic = diag, filepath = filepath })
           if cfg.diagnostics.enabled then
             diagnostics.set(filepath, { diag })
@@ -206,10 +218,11 @@ function M.run(opts)
         fidget_finish("done (with errors)")
       end
 
-      storage.save(state.findings, M.get_context())
+      run_files[run_token] = storage.save(state.findings, M.get_context())
 
-      if type(cfg.quickfix) == "table" and cfg.quickfix.auto and #state.findings > 0 then
-        require("coderabbit.quickfix").set(state.findings, {
+      local open = utils.open_findings(state.findings)
+      if type(cfg.quickfix) == "table" and cfg.quickfix.auto and #open > 0 then
+        require("coderabbit.quickfix").set(open, {
           title = "CodeRabbit Review",
         })
       end
@@ -252,12 +265,47 @@ function M.restore(id)
   diagnostics.clear()
   local findings = type(review.findings) == "table" and review.findings or {}
   vim.schedule(function()
-    for _, finding in ipairs(findings) do
-      diagnostics.set(finding.filepath, { finding.diagnostic })
+    local restored = 0
+    for index, finding in ipairs(findings) do
+      if not finding.status then
+        local diag = finding.diagnostic
+        diag.user_data = diag.user_data or {}
+        diag.user_data.ref = { file = review.filename, index = index }
+        diagnostics.set(finding.filepath, { diag })
+        restored = restored + 1
+      end
     end
 
-    utils.notify(string.format("Restored %d findings from review #%d", #findings, id))
+    utils.notify(string.format("Restored %d findings from review #%d", restored, id))
   end)
+end
+
+--- Mark the finding a diagnostic came from as resolved or dismissed.
+--- @param ref table The diagnostic's user_data.ref: { run, index } or { file, index }
+--- @param status string "resolved" or "dismissed"
+--- @return boolean success
+function M.set_status(ref, status)
+  if type(ref) ~= "table" or type(ref.index) ~= "number" or not STATUSES[status] then
+    return false
+  end
+
+  local file = ref.file or run_files[ref.run]
+  local is_current = (ref.run ~= nil and ref.run == state.run_token)
+    or (file ~= nil and file == run_files[state.run_token])
+
+  local ok = false
+  if is_current and state.findings[ref.index] then
+    state.findings[ref.index].status = status
+    ok = true
+  end
+  if file then
+    ok = storage.set_status(file, ref.index, status) or ok
+  end
+
+  if not ok then
+    utils.notify("Finding is no longer part of a saved review", vim.log.levels.WARN)
+  end
+  return ok
 end
 
 function M.clear()
@@ -269,6 +317,7 @@ function M.clear()
   state.current_branch = nil
   state.base_branch = nil
   state.base_commit = nil
+  state.run_token = nil
   utils.notify("Cleared")
 end
 
