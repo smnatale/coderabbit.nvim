@@ -10,7 +10,7 @@ end
 --- Build the command table for `cr review --agent`.
 local function build_cmd(opts)
   local cfg = config.get()
-  local cmd = { cfg.cli.binary, "review", "--agent", "--no-color" }
+  local cmd = { cfg.cli.binary, "review", "--agent" }
 
   local review_type = opts.type or cfg.review.type
   if review_type then
